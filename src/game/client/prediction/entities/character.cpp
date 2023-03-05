@@ -563,7 +563,7 @@ void CCharacter::PreTick()
 	DDRaceTick();
 
 	m_Core.m_Input = m_Input;
-	m_Core.Tick(true, !m_pGameWorld->m_WorldConfig.m_NoWeakHookAndBounce);
+	m_Core.Tick(GameWorld()->GameTick(), true, !m_pGameWorld->m_WorldConfig.m_NoWeakHookAndBounce);
 }
 
 void CCharacter::Tick()

@@ -477,7 +477,7 @@ void CGameClient::OnConnected()
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0, false);
 	m_Layers.Init(Kernel());
-	m_Collision.Init(Layers());
+	m_Collision.Init(Kernel()->RequestInterface<IMap>(), Layers());
 	m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 
 	CRaceHelper::ms_aFlagIndex[0] = -1;
@@ -1150,7 +1150,7 @@ void CGameClient::OnNewSnapshot()
 		while(pCharacter->m_Tick < Tick)
 		{
 			pCharacter->m_Tick++;
-			TempCore.Tick(false);
+			TempCore.Tick(pCharacter->m_Tick, false);
 			TempCore.Move();
 			TempCore.Quantize();
 		}
@@ -2550,13 +2550,13 @@ void CGameClient::DetectStrongHook()
 			{
 				if(dir == 0)
 				{
-					FromChar.Tick(false);
-					ToChar.Tick(false);
+					FromChar.Tick(Tick, false);
+					ToChar.Tick(Tick, false);
 				}
 				else
 				{
-					ToChar.Tick(false);
-					FromChar.Tick(false);
+					ToChar.Tick(Tick, false);
+					FromChar.Tick(Tick, false);
 				}
 				FromChar.Move();
 				FromChar.Quantize();

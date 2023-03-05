@@ -139,13 +139,37 @@ void CCharacterCore::Reset()
 	m_Input.m_TargetY = -1;
 }
 
-void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
+void CCharacterCore::Tick(int pTick, bool UseInput, bool DoDeferredTick)
 {
+	Collision()->Tick(pTick);
+	Collision()->MoveBoxOutQuad(&m_Pos, PhysicalSizeVec2());
+
 	m_MoveRestrictions = m_pCollision->GetMoveRestrictions(UseInput ? IsSwitchActiveCb : 0, this, m_Pos);
 	m_TriggeredEvents = 0;
 
 	// get ground state
-	const bool Grounded = m_pCollision->CheckPoint(m_Pos.x + PhysicalSize() / 2, m_Pos.y + PhysicalSize() / 2 + 5) || m_pCollision->CheckPoint(m_Pos.x - PhysicalSize() / 2, m_Pos.y + PhysicalSize() / 2 + 5);
+	// TODO: +-2 should not be necessary
+	vec2 grounded_check_pos_1 = m_Pos + vec2(PhysicalSize() / 2 - 2, PhysicalSize() / 2 + 5);
+	auto [tile_id_1, moving_tile_id_1] = m_pCollision->GetQuadCollisionAt(&grounded_check_pos_1, m_Pos);
+
+	vec2 grounded_check_pos_2 = m_Pos + vec2(-PhysicalSize() / 2 + 2, PhysicalSize() / 2 + 5);
+	auto [tile_id_2, moving_tile_id_2] = m_pCollision->GetQuadCollisionAt(&grounded_check_pos_2, m_Pos);
+
+	const bool GroundedQuads = tile_id_1 == TILE_SOLID || tile_id_1 == TILE_NOHOOK || tile_id_2 == TILE_SOLID || tile_id_2 == TILE_NOHOOK;
+	if (GroundedQuads) {
+		if (m_GroundedQuadLast) {
+			vec2 new_offset = Collision()->MoveGroundedQuad(m_Pos, pTick - 1, pTick, m_GroundedQuadId, PhysicalSizeVec2());
+			m_Pos += new_offset;
+		}
+		else {
+			m_GroundedQuadLast = true;
+			m_GroundedQuadId = moving_tile_id_1 >= 0 ? moving_tile_id_1 : moving_tile_id_2;
+		}
+	} else {
+		m_GroundedQuadLast = false;
+	}
+
+	const bool Grounded = GroundedQuads || m_pCollision->CheckPoint(m_Pos.x + PhysicalSize() / 2, m_Pos.y + PhysicalSize() / 2 + 5) || m_pCollision->CheckPoint(m_Pos.x - PhysicalSize() / 2, m_Pos.y + PhysicalSize() / 2 + 5);
 	vec2 TargetDirection = normalize(vec2(m_Input.m_TargetX, m_Input.m_TargetY));
 
 	m_Vel.y += m_Tuning.m_Gravity;
@@ -227,6 +251,7 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 			SetHookedPlayer(-1);
 			m_HookState = HOOK_IDLE;
 			m_HookPos = m_Pos;
+			m_HookedMovingTileId = -1;
 		}
 	}
 
@@ -277,14 +302,21 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 		bool GoingToRetract = false;
 		bool GoingThroughTele = false;
 		int teleNr = 0;
-		int Hit = m_pCollision->IntersectLineTeleHook(m_HookPos, NewPos, &NewPos, 0, &teleNr);
+		auto [Hit, moving_tile_id] = m_pCollision->IntersectLineTeleHook(m_HookPos, NewPos, &NewPos, 0, &teleNr, m_Pos);
+		if (moving_tile_id >= 0) {
+			m_InitialMovingTileHookTick = pTick;
+			m_InitialMovingTileHookPos = NewPos;
+			m_HookedMovingTileId = moving_tile_id;
+		}
 
 		// m_NewHook = false;
 
 		if(Hit)
 		{
-			if(Hit == TILE_NOHOOK)
+			if(Hit == TILE_NOHOOK) {
+				NewPos = Collision()->ApplyParaToHook(m_InitialMovingTileHookPos, pTick, m_HookedMovingTileId, m_Pos);
 				GoingToRetract = true;
+			}
 			else if(Hit == TILE_TELEINHOOK)
 				GoingThroughTele = true;
 			else
@@ -369,6 +401,10 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 			// keep players hooked for a max of 1.5sec
 			// if(Server()->Tick() > hook_tick+(Server()->TickSpeed()*3)/2)
 			// release_hooked();
+		}
+
+		if (m_HookedPlayer == -1 && m_HookedMovingTileId > -1) {
+			m_HookPos = Collision()->UpdateHookPos(m_InitialMovingTileHookPos, m_InitialMovingTileHookTick, pTick, m_HookedMovingTileId, m_Pos);
 		}
 
 		// don't do this hook rutine when we are hook to a player

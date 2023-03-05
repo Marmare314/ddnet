@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include "engine/shared/protocol.h"
 #include <base/math.h>
 #include <base/system.h>
 #include <base/vmath.h>
@@ -14,6 +15,21 @@
 #include <game/mapitems.h>
 
 #include <engine/shared/config.h>
+
+#include <chrono>
+#include <iterator>
+
+using namespace std::chrono_literals;
+
+std::tuple<std::array<vec2, 3>, std::array<vec2, 3>> CMovingTileData::Triangulate() const {
+	if (m_TriangulationPattern) {
+		return {{m_CurrentPos[3], m_CurrentPos[2], m_CurrentPos[1]},
+				{m_CurrentPos[1], m_CurrentPos[2], m_CurrentPos[0]}};
+	} else {
+		return {{m_CurrentPos[1], m_CurrentPos[3], m_CurrentPos[0]},
+				{m_CurrentPos[0], m_CurrentPos[3], m_CurrentPos[2]}};
+	}
+}
 
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
 {
@@ -56,7 +72,32 @@ CCollision::~CCollision()
 	Dest();
 }
 
-void CCollision::Init(class CLayers *pLayers)
+// TODO: this is not nice
+vec2 normalize_ivec2(ivec2 v)
+{
+	return vec2(v.x, v.y) / length(vec2(v.x, v.y));
+}
+
+// TODO: this is not nice
+float dot(vec2 a, vec2 b) {
+	return a.x * b.x + a.y * b.y;
+}
+
+bool calculate_triangulation(std::array<ivec2, 4> pPos)
+{
+	// calculate delaunay triangulation of pPos
+	float dot0 = dot(normalize_ivec2(pPos[2] - pPos[3]), normalize_ivec2(pPos[1] - pPos[3]));
+	float dot1 = dot(normalize_ivec2(pPos[2] - pPos[0]), normalize_ivec2(pPos[1] - pPos[0]));
+	float angle0 = acos(fmax(-1, fmin(1, dot0))) + acos(fmax(-1, fmin(1, dot1)));
+
+	dot0 = dot(normalize_ivec2(pPos[0] - pPos[2]), normalize_ivec2(pPos[3] - pPos[2]));
+	dot1 = dot(normalize_ivec2(pPos[0] - pPos[1]), normalize_ivec2(pPos[3] - pPos[1]));
+	float angle1 = acos(fmax(-1, fmin(1, dot0))) + acos(fmax(-1, fmin(1, dot1)));
+
+	return angle0 < angle1;
+}
+
+void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 {
 	Dest();
 	m_HighestSwitchNumber = 0;
@@ -131,6 +172,251 @@ void CCollision::Init(class CLayers *pLayers)
 			}
 		}
 	}
+
+	// Moving tiles
+	int StartGroups, NumGroups;
+	pMap->GetType(MAPITEMTYPE_GROUP, &StartGroups, &NumGroups);
+
+	int last_envpoint_used = 0;
+	for (int index_group = 0; index_group < NumGroups; index_group++) {
+		CMapItemGroup* group = static_cast<CMapItemGroup*>(pMap->GetItem(StartGroups + index_group, 0, 0));
+		if (group->m_Version < 2) {
+			continue;
+		}
+
+		for (int index_layer = 0; index_layer < group->m_NumLayers; index_layer++) {
+			CMapItemLayer* layer = pLayers->GetLayer(group->m_StartLayer + index_layer);
+			// if (layer->m_Type == LAYERTYPE_QUADS && layer->m_Flags & LAYERFLAG_MOVING_TILES) { // TODO: use this + flag which type of moving tiles
+			if (layer->m_Type == LAYERTYPE_QUADS) {
+				// TODO: assert parazoom is off
+				auto* layer_quads = reinterpret_cast<CMapItemLayerQuads*>(layer);
+				auto* quad_array = static_cast<CQuad*>(pMap->GetDataSwapped(layer_quads->m_Data));
+				for (int index_quad = 0; index_quad < layer_quads->m_NumQuads; index_quad++) {
+					// TODO: assert that envelope is synchronized
+					int StartEnvelopes, NumEnvelopes;
+					pMap->GetType(MAPITEMTYPE_ENVELOPE, &StartEnvelopes, &NumEnvelopes);
+
+					auto* env = static_cast<CMapItemEnvelope*>(pMap->GetItem(StartEnvelopes + quad_array[index_quad].m_PosEnv, 0, 0));
+
+					int num_env_points = env->m_NumPoints < 0 ? 0 : env->m_NumPoints;
+					if (env->m_StartPoint + num_env_points > last_envpoint_used) {
+						last_envpoint_used = env->m_StartPoint + num_env_points;
+					}
+
+					m_pMovingTiles.push_back(CMovingTileData{
+						{quad_array[index_quad].m_aPoints[0], quad_array[index_quad].m_aPoints[1], quad_array[index_quad].m_aPoints[2], quad_array[index_quad].m_aPoints[3]},
+						quad_array[index_quad].m_aPoints[4],
+						quad_array[index_quad].m_PosEnvOffset,
+						env->m_StartPoint,
+						num_env_points,
+						group->m_ParallaxX,
+						group->m_ParallaxY,
+						group->m_OffsetX,
+						group->m_OffsetY
+					});
+
+					m_pMovingTiles.back().m_TriangulationPattern = calculate_triangulation(m_pMovingTiles.back().m_Pos);
+					m_pMovingTiles.back().m_TileType = TILE_FREEZE;
+				}
+			}
+		}
+	}
+
+	int Start, Num;
+	pMap->GetType(MAPITEMTYPE_ENVPOINTS, &Start, &Num);
+
+	m_pEnvPoints.resize(last_envpoint_used);
+	if(Num > 0) {
+		auto* pPoints = static_cast<CEnvPoint *>(pMap->GetItem(Start, 0, 0));
+		m_pEnvPoints.assign(pPoints, pPoints + last_envpoint_used);
+	}
+}
+
+// copied from render_map.cpp
+ivec2 Rotate(ivec2 pCenter, ivec2 pPoint, float Rotation)
+{
+	int x = pPoint.x - pCenter.x;
+	int y = pPoint.y - pCenter.y;
+
+	ivec2 res;
+	res.x = (int)(x * cosf(Rotation) - y * sinf(Rotation) + pCenter.x);
+	res.y = (int)(x * sinf(Rotation) + y * cosf(Rotation) + pCenter.y);
+
+	return res;
+}
+
+vec3 evaluate_envelope(int pTick, float intraTick, const CMovingTileData& tile, const std::vector<CEnvPoint>& pEnvPoints) {
+	const auto TickToNanoSeconds = std::chrono::nanoseconds(1s) / (int64_t)SERVER_TICK_SPEED;
+	auto TimeNanos = std::chrono::nanoseconds(std::chrono::milliseconds(tile.m_PosEnvOffset)) + TickToNanoSeconds * (int64_t)pTick + std::chrono::nanoseconds(static_cast<int64_t>(TickToNanoSeconds.count() * intraTick));
+
+	vec3 pos_offset;
+	if(tile.m_NumEnvPoints == 0)
+	{
+		pos_offset.x = 0;
+		pos_offset.y = 0;
+		pos_offset.z = 0;
+	}
+	else if(tile.m_NumEnvPoints == 1)
+	{
+		pos_offset.x = fx2f(pEnvPoints.at(tile.m_StartEnvPoint).m_aValues[0]);
+		pos_offset.y = fx2f(pEnvPoints.at(tile.m_StartEnvPoint).m_aValues[1]);
+		pos_offset.z = fx2f(pEnvPoints.at(tile.m_StartEnvPoint).m_aValues[2]);
+	}
+	else
+	{
+		int64_t MaxPointTime = (int64_t)pEnvPoints.at(tile.m_StartEnvPoint + tile.m_NumEnvPoints - 1).m_Time * std::chrono::nanoseconds(1ms).count();
+		if(MaxPointTime > 0)
+		{
+			TimeNanos = std::chrono::nanoseconds(TimeNanos.count() % MaxPointTime);
+		}
+		else
+		{
+			TimeNanos = decltype(TimeNanos)::zero();
+		}
+
+		int TimeMillis = (int)(TimeNanos / std::chrono::nanoseconds(1ms).count()).count();
+		bool in_any_range = false;
+		for(int i = 0; i < tile.m_NumEnvPoints - 1; i++)
+		{
+			if(TimeMillis >= pEnvPoints.at(tile.m_StartEnvPoint + i).m_Time && TimeMillis <= pEnvPoints.at(tile.m_StartEnvPoint + i + 1).m_Time)
+			{
+				in_any_range = true;
+
+				float Delta = pEnvPoints.at(tile.m_StartEnvPoint + i + 1).m_Time - pEnvPoints.at(tile.m_StartEnvPoint + i).m_Time;
+				float a = (float)(((double)TimeNanos.count() / (double)std::chrono::nanoseconds(1ms).count()) - pEnvPoints.at(tile.m_StartEnvPoint + i).m_Time) / Delta;
+
+				if(pEnvPoints.at(tile.m_StartEnvPoint + i).m_Curvetype == CURVETYPE_SMOOTH)
+					a = -2 * a * a * a + 3 * a * a; // second hermite basis
+				else if(pEnvPoints.at(tile.m_StartEnvPoint + i).m_Curvetype == CURVETYPE_SLOW)
+					a = a * a * a;
+				else if(pEnvPoints.at(tile.m_StartEnvPoint + i).m_Curvetype == CURVETYPE_FAST)
+				{
+					a = 1 - a;
+					a = 1 - a * a * a;
+				}
+				else if(pEnvPoints.at(tile.m_StartEnvPoint + i).m_Curvetype == CURVETYPE_STEP)
+					a = 0;
+				else
+				{
+					// linear
+				}
+
+				float v0 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i).m_aValues[0]);
+				float v1 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i + 1).m_aValues[0]);
+				pos_offset.x = v0 + (v1 - v0) * a;
+
+				v0 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i).m_aValues[1]);
+				v1 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i + 1).m_aValues[1]);
+				pos_offset.y = v0 + (v1 - v0) * a;
+
+				v0 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i).m_aValues[2]);
+				v1 = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + i + 1).m_aValues[2]);
+				pos_offset.z = v0 + (v1 - v0) * a;
+			}
+		}
+
+		if (!in_any_range) {
+			pos_offset.x = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + tile.m_NumEnvPoints - 1).m_aValues[0]);
+			pos_offset.y = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + tile.m_NumEnvPoints - 1).m_aValues[1]);
+			pos_offset.z = fx2f(pEnvPoints.at(tile.m_StartEnvPoint + tile.m_NumEnvPoints - 1).m_aValues[2]);
+		}
+	}
+
+	pos_offset.z = pos_offset.z / 180.0f * pi;
+	return pos_offset;
+}
+
+std::array<vec2, 4> update_envelope(int pTick, float intraTick, const CMovingTileData& tile, const std::vector<CEnvPoint>& pEnvPoints) {
+	auto pos_offset = evaluate_envelope(pTick, intraTick, tile, pEnvPoints);
+
+	std::array<vec2, 4> eval_pos;
+	for(int i = 0; i < 4; i++)
+	{
+		auto rotated_point = Rotate(tile.m_Center, tile.m_Pos[i], pos_offset.z);
+		eval_pos[i].x = fx2f(rotated_point.x) + pos_offset.x;
+		eval_pos[i].y = fx2f(rotated_point.y) + pos_offset.y;
+	}
+
+	return eval_pos;
+}
+
+void CCollision::Tick(int pTick, float intraTick) {
+	for (auto& movingTile: m_pMovingTiles) {
+		movingTile.m_CurrentPos = update_envelope(pTick, intraTick, movingTile, m_pEnvPoints);
+	}
+}
+
+bool point_in_triangle(std::array<vec2, 3> triangle, vec2 point) {
+	vec2 v0 = triangle[2] - triangle[0];
+	vec2 v1 = triangle[1] - triangle[0];
+	vec2 v2 = point - triangle[0];
+
+	float dot00 = v0[0] * v0[0] + v0[1] * v0[1];
+	float dot01 = v0[0] * v1[0] + v0[1] * v1[1];
+	float dot02 = v0[0] * v2[0] + v0[1] * v2[1];
+	float dot11 = v1[0] * v1[0] + v1[1] * v1[1];
+	float dot12 = v1[0] * v2[0] + v1[1] * v2[1];
+
+	float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+	float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+	float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+	return (u >= 0) && (v >= 0) && (u + v < 1);
+}
+
+vec2 apply_para_to_point(vec2 player_pos, vec2 pos, int parax, int paray, int offsetx, int offsety) {
+	return vec2(pos.x + player_pos.x - player_pos.x * parax / 100.0f - offsetx, pos.y + player_pos.y - player_pos.y * paray / 100.0f - offsety);
+}
+
+vec2 remove_para_from_point(vec2 player_pos, vec2 pos, int parax, int paray, int offsetx, int offsety) {
+	return vec2(pos.x - player_pos.x + player_pos.x * parax / 100.0f + offsetx, pos.y - player_pos.y + player_pos.y * paray / 100.0f + offsety);
+}
+
+std::array<vec2, 3> apply_para_to_triangle(std::array<vec2, 3> triangle, vec2 player_pos, int parax, int paray, int offsetx, int offsety) {
+	std::array<vec2, 3> new_triangle;
+	for (int i = 0; i < 3; i++) {
+		new_triangle[i] = apply_para_to_point(player_pos, triangle[i], parax, paray, offsetx, offsety);
+	}
+	return new_triangle;
+}
+
+std::tuple<int, int> CCollision::GetQuadCollisionAt(vec2* Pos, vec2 player_pos) const {
+	for (size_t i = 0; i < m_pMovingTiles.size(); i++) {
+		const auto& movingTile = m_pMovingTiles.at(i);
+		auto [triangle_1, triangle_2] = movingTile.Triangulate();
+		triangle_1 = apply_para_to_triangle(triangle_1, player_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+		triangle_2 = apply_para_to_triangle(triangle_2, player_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+		if (point_in_triangle(triangle_1, *Pos) || point_in_triangle(triangle_2, *Pos)) {
+			*Pos = remove_para_from_point(player_pos, *Pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+			return {movingTile.m_TileType, i};
+		}
+	}
+	return {-1, -1};
+}
+
+vec2 CCollision::UpdateHookPos(vec2 initial_hook_pos, int hook_tick, int pTick, int moving_tile_id, vec2 player_pos) const {
+	const auto& movingTile = m_pMovingTiles.at(moving_tile_id);
+	if (movingTile.m_NumEnvPoints == 0) {
+		apply_para_to_point(player_pos, initial_hook_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+	}
+
+	auto pos_offset0 = evaluate_envelope(hook_tick, 0, movingTile, m_pEnvPoints);
+	auto pos_offset1 = evaluate_envelope(pTick, 0, movingTile, m_pEnvPoints);
+
+	vec3 pos_offset = pos_offset1 - pos_offset0;
+
+	auto rotated_point = Rotate(movingTile.m_Center, {f2fx(initial_hook_pos.x), f2fx(initial_hook_pos.y)}, pos_offset.z);
+	
+	vec2 new_hook_pos;
+	new_hook_pos.x = fx2f(rotated_point.x) + pos_offset.x;
+	new_hook_pos.y = fx2f(rotated_point.y) + pos_offset.y;
+
+	return apply_para_to_point(player_pos, new_hook_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+}
+
+vec2 CCollision::ApplyParaToHook(vec2 initial_hook_pos, int tick, int moving_tile_id, vec2 player_pos) const {
+	const auto& movingTile = m_pMovingTiles.at(moving_tile_id);
+	return apply_para_to_point(player_pos, initial_hook_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
 }
 
 void CCollision::FillAntibot(CAntibotMapData *pMapData)
@@ -320,7 +606,7 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 	return 0;
 }
 
-int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
+std::tuple<int, int> CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr, vec2 player_pos) const
 {
 	float Distance = distance(Pos0, Pos1);
 	int End(Distance + 1);
@@ -346,10 +632,11 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 				*pOutCollision = Pos;
 			if(pOutBeforeCollision)
 				*pOutBeforeCollision = Last;
-			return TILE_TELEINHOOK;
+			return {TILE_TELEINHOOK, -1};
 		}
 
 		int hit = 0;
+		int moving_tile_id = -1;
 		if(CheckPoint(ix, iy))
 		{
 			if(!IsThrough(ix, iy, dx, dy, Pos0, Pos1))
@@ -359,13 +646,17 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 		{
 			hit = TILE_NOHOOK;
 		}
+		else if(auto [tmp_hit, id] = GetQuadCollisionAt(&Pos, player_pos); tmp_hit == TILE_SOLID || tmp_hit == TILE_NOHOOK) {
+			hit = tmp_hit;
+			moving_tile_id = id;
+		}
 		if(hit)
 		{
 			if(pOutCollision)
 				*pOutCollision = Pos;
 			if(pOutBeforeCollision)
 				*pOutBeforeCollision = Last;
-			return hit;
+			return {hit, moving_tile_id};
 		}
 
 		Last = Pos;
@@ -374,7 +665,7 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 		*pOutCollision = Pos1;
 	if(pOutBeforeCollision)
 		*pOutBeforeCollision = Pos1;
-	return 0;
+	return {0, -1};
 }
 
 int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
@@ -461,6 +752,100 @@ void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, i
 	}
 }
 
+bool line_collide(vec2 p1, vec2 p2, vec2 center, float radius) {
+	vec2 intersect_pos;
+	if(closest_point_on_line(p1, p2, center, intersect_pos)) {
+		float len = distance(center, intersect_pos);
+		return len < radius;
+	}
+	return false;
+}
+
+bool circle_intersects_triangle(std::array<vec2, 3> corners, vec2 center, float radius) {
+	return point_in_triangle(corners, center)
+		|| line_collide(corners[0], corners[1], center, radius)
+		|| line_collide(corners[1], corners[2], center, radius)
+		|| line_collide(corners[2], corners[0], center, radius);
+}
+
+bool CCollision::TestBoxQuad(vec2 Pos, vec2 Size) const {
+	for (const auto& movingTile: m_pMovingTiles) {
+		if (!(movingTile.m_TileType == TILE_SOLID || movingTile.m_TileType == TILE_NOHOOK)) {
+			return false;
+		}
+
+		auto [triangle_1, triangle_2] = movingTile.Triangulate();
+		triangle_1 = apply_para_to_triangle(triangle_1, Pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+		triangle_2 = apply_para_to_triangle(triangle_2, Pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+
+		if (circle_intersects_triangle(triangle_1, Pos, Size.x / 2) || circle_intersects_triangle(triangle_2, Pos, Size.x / 2)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void CCollision::MoveBoxOutQuad(vec2* pInoutPos, vec2 Size) const {
+	for (const auto& movingTile: m_pMovingTiles) {
+		if (movingTile.m_TileType == TILE_SOLID || movingTile.m_TileType == TILE_NOHOOK) {
+			auto [triangle_1, triangle_2] = movingTile.Triangulate();
+			triangle_1 = apply_para_to_triangle(triangle_1, *pInoutPos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+			triangle_2 = apply_para_to_triangle(triangle_2, *pInoutPos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+
+
+			if (circle_intersects_triangle(triangle_1, *pInoutPos, Size.x / 2) || circle_intersects_triangle(triangle_2, *pInoutPos, Size.x / 2)) {
+				vec2 p;
+				vec2 nearest_point_on_line;
+				bool is_inside = point_in_triangle(triangle_1, *pInoutPos) || point_in_triangle(triangle_2, *pInoutPos);
+				
+				closest_point_on_line(triangle_1[0], triangle_1[1], *pInoutPos, p);
+				float min_dist = distance(p, *pInoutPos);
+				nearest_point_on_line = p;
+
+				closest_point_on_line(triangle_1[0], triangle_1[2], *pInoutPos, p);
+				float dist = distance(p, *pInoutPos);
+				if (dist < min_dist) {
+					min_dist = dist;
+					nearest_point_on_line = p;
+				}
+
+				closest_point_on_line(triangle_2[0], triangle_2[2], *pInoutPos, p);
+				dist = distance(p, *pInoutPos);
+				if (dist < min_dist) {
+					min_dist = dist;
+					nearest_point_on_line = p;
+				}
+
+				closest_point_on_line(triangle_2[1], triangle_2[2], *pInoutPos, p);
+				dist = distance(p, *pInoutPos);
+				if (dist < min_dist) {
+					min_dist = dist;
+					nearest_point_on_line = p;
+				}
+
+				vec2 pos_offset = normalize(*pInoutPos - nearest_point_on_line) * Size.x / 2 * (is_inside ? -1 : 1);
+				*pInoutPos = nearest_point_on_line + pos_offset;
+			}
+		}
+	}
+}
+
+vec2 CCollision::MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, int quad_id, vec2 Size) const {
+	const auto& movingTile = m_pMovingTiles[quad_id];
+
+	vec2 offset(0, 0);
+	if (movingTile.m_NumEnvPoints == 0) {
+		return offset;
+	}
+
+	auto pos_offset0 = evaluate_envelope(initial_tick, 0, movingTile, m_pEnvPoints);
+	auto pos_offset1 = evaluate_envelope(tick, 0, movingTile, m_pEnvPoints);
+
+	vec3 pos_offset = pos_offset1 - pos_offset0;
+
+	return vec2(pos_offset.x, pos_offset.y);
+}
+
 bool CCollision::TestBox(vec2 Pos, vec2 Size) const
 {
 	Size *= 0.5f;
@@ -518,6 +903,35 @@ void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elas
 				}
 
 				if(TestBox(vec2(NewPos.x, Pos.y), Size))
+				{
+					NewPos.x = Pos.x;
+					Vel.x *= -Elasticity;
+					Hits++;
+				}
+
+				// neither of the tests got a collision.
+				// this is a real _corner case_!
+				if(Hits == 0)
+				{
+					NewPos.y = Pos.y;
+					Vel.y *= -Elasticity;
+					NewPos.x = Pos.x;
+					Vel.x *= -Elasticity;
+				}
+			}
+
+			if(TestBoxQuad(vec2(NewPos.x, NewPos.y), Size))
+			{
+				int Hits = 0;
+
+				if(TestBoxQuad(vec2(Pos.x, NewPos.y), Size))
+				{
+					NewPos.y = Pos.y;
+					Vel.y *= -Elasticity;
+					Hits++;
+				}
+
+				if(TestBoxQuad(vec2(NewPos.x, Pos.y), Size))
 				{
 					NewPos.x = Pos.x;
 					Vel.x *= -Elasticity;

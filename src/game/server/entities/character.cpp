@@ -735,7 +735,7 @@ void CCharacter::PreTick()
 	Antibot()->OnCharacterTick(m_pPlayer->GetCID());
 
 	m_Core.m_Input = m_Input;
-	m_Core.Tick(true, !g_Config.m_SvNoWeakHook);
+	m_Core.Tick(Server()->Tick(), true, !g_Config.m_SvNoWeakHook);
 }
 
 void CCharacter::Tick()
@@ -783,7 +783,7 @@ void CCharacter::TickDeferred()
 		CWorldCore TempWorld;
 		m_ReckoningCore.Init(&TempWorld, Collision(), &Teams()->m_Core, m_pTeleOuts);
 		m_ReckoningCore.m_Id = m_pPlayer->GetCID();
-		m_ReckoningCore.Tick(false);
+		m_ReckoningCore.Tick(Server()->Tick(), false);
 		m_ReckoningCore.Move();
 		m_ReckoningCore.Quantize();
 	}

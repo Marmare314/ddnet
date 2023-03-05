@@ -239,6 +239,12 @@ public:
 	int m_HookedPlayer;
 	std::set<int> m_AttachedPlayers;
 	void SetHookedPlayer(int HookedPlayer);
+	int m_HookedMovingTileId;
+	vec2 m_InitialMovingTileHookPos;
+	int m_InitialMovingTileHookTick;
+
+	bool m_GroundedQuadLast;
+	int m_GroundedQuadId;
 
 	int m_ActiveWeapon;
 	struct WeaponStat
@@ -274,7 +280,7 @@ public:
 	void Init(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore *pTeams = nullptr, std::map<int, std::vector<vec2>> *pTeleOuts = nullptr);
 	void Reset();
 	void TickDeferred();
-	void Tick(bool UseInput, bool DoDeferredTick = true);
+	void Tick(int pTick, bool UseInput, bool DoDeferredTick = true);
 	void Move();
 
 	void Read(const CNetObj_CharacterCore *pObjCore);

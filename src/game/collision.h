@@ -3,10 +3,13 @@
 #ifndef GAME_COLLISION_H
 #define GAME_COLLISION_H
 
+#include "game/mapitems.h"
 #include <base/vmath.h>
 #include <engine/shared/protocol.h>
 
 #include <list>
+#include <vector>
+#include <array>
 
 enum
 {
@@ -21,17 +24,36 @@ vec2 ClampVel(int MoveRestriction, vec2 Vel);
 typedef bool (*CALLBACK_SWITCHACTIVE)(int Number, void *pUser);
 struct CAntibotMapData;
 
+struct CMovingTileData {
+	std::array<ivec2, 4> m_Pos;
+	ivec2 m_Center;
+	int m_PosEnvOffset;
+	int m_StartEnvPoint;
+	int m_NumEnvPoints;
+	int m_ParallaxX;
+	int m_ParallaxY;
+	int m_OffsetX;
+	int m_OffsetY;
+	int m_TileType;
+	std::array<vec2, 4> m_CurrentPos;
+	bool m_TriangulationPattern;
+
+	std::tuple<std::array<vec2, 3>, std::array<vec2, 3>> Triangulate() const;
+};
+
 class CCollision
 {
 	class CTile *m_pTiles;
 	int m_Width;
 	int m_Height;
 	class CLayers *m_pLayers;
+	std::vector<CEnvPoint> m_pEnvPoints;
+	std::vector<CMovingTileData> m_pMovingTiles;
 
 public:
 	CCollision();
 	~CCollision();
-	void Init(class CLayers *pLayers);
+	void Init(class IMap* pMap, class CLayers *pLayers);
 	void FillAntibot(CAntibotMapData *pMapData);
 	bool CheckPoint(float x, float y) const { return IsSolid(round_to_int(x), round_to_int(y)); }
 	bool CheckPoint(vec2 Pos) const { return CheckPoint(Pos.x, Pos.y); }
@@ -40,7 +62,7 @@ public:
 	int GetHeight() const { return m_Height; }
 	int IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
 	int IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const;
-	int IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const;
+	std::tuple<int, int> IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr, vec2 player_pos) const;
 	void MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces) const;
 	void MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity) const;
 	bool TestBox(vec2 Pos, vec2 Size) const;
@@ -115,6 +137,14 @@ public:
 	class CTuneTile *TuneLayer() { return m_pTune; }
 	class CLayers *Layers() { return m_pLayers; }
 	int m_HighestSwitchNumber;
+
+	void Tick(int pTick, float intraTick = 0);
+	std::tuple<int, int> GetQuadCollisionAt(vec2* Pos, vec2 player_pos) const;
+	vec2 UpdateHookPos(vec2 initial_hook_pos, int hook_tick, int pTick, int moving_tile_id, vec2 player_pos) const;
+	vec2 ApplyParaToHook(vec2 initial_hook_pos, int tick, int moving_tile_id, vec2 player_pos) const;
+	bool TestBoxQuad(vec2 Pos, vec2 Size) const;
+	void MoveBoxOutQuad(vec2 *pInoutPos, vec2 Size) const;
+	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, int quad_id, vec2 Size) const;
 
 private:
 	class CTeleTile *m_pTele;
