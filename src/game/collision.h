@@ -145,6 +145,7 @@ public:
 	bool TestBoxQuad(vec2 Pos, vec2 Size) const;
 	void MoveBoxOutQuad(vec2 *pInoutPos, vec2 Size) const;
 	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, int quad_id, vec2 Size) const;
+	std::vector<int> GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos, float Radius) const;
 
 private:
 	class CTeleTile *m_pTele;

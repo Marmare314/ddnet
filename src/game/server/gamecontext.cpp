@@ -3620,6 +3620,8 @@ void CGameContext::CreateAllEntities(bool Initial)
 			}
 		}
 	}
+
+	m_pController->OnMovingTiles();
 }
 
 void CGameContext::DeleteTempfile()

@@ -17,6 +17,7 @@
 #include "entities/light.h"
 #include "entities/pickup.h"
 #include "entities/projectile.h"
+#include "entities/moving_tiles.h"
 
 IGameController::IGameController(class CGameContext *pGameServer)
 {
@@ -387,6 +388,11 @@ bool IGameController::OnEntity(int Index, int x, int y, int Layer, int Flags, bo
 	}
 
 	return false;
+}
+
+void IGameController::OnMovingTiles()
+{
+	new CMovingTiles(&GameServer()->m_World);
 }
 
 void IGameController::OnPlayerConnect(CPlayer *pPlayer)

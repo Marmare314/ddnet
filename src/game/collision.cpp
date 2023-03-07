@@ -216,7 +216,7 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 					});
 
 					m_pMovingTiles.back().m_TriangulationPattern = calculate_triangulation(m_pMovingTiles.back().m_Pos);
-					m_pMovingTiles.back().m_TileType = TILE_FREEZE;
+					m_pMovingTiles.back().m_TileType = TILE_SOLID;
 				}
 			}
 		}
@@ -844,6 +844,26 @@ vec2 CCollision::MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, i
 	vec3 pos_offset = pos_offset1 - pos_offset0;
 
 	return vec2(pos_offset.x, pos_offset.y);
+}
+
+std::vector<int> CCollision::GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos, float Radius) const {
+	float distance = length(final_pos - initial_pos);
+	vec2 direction = normalize(final_pos - initial_pos);
+	std::vector<int> collisions;
+	int steps = distance / Radius + 1;
+	for (int i = 0; i < steps; i++) {
+		vec2 pos = initial_pos + direction * Radius * i;
+		for (const auto& movingTile: m_pMovingTiles) {
+			auto [triangle_1, triangle_2] = movingTile.Triangulate();
+			triangle_1 = apply_para_to_triangle(triangle_1, pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+			triangle_2 = apply_para_to_triangle(triangle_2, pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+
+			if (circle_intersects_triangle(triangle_1, pos, Radius) || circle_intersects_triangle(triangle_2, pos, Radius)) {
+				collisions.push_back(movingTile.m_TileType);
+			}
+		}
+	}
+	return collisions;
 }
 
 bool CCollision::TestBox(vec2 Pos, vec2 Size) const
