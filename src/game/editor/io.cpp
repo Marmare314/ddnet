@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "editor.h"
+#include "game/mapitems.h"
 #include <engine/client.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
@@ -295,6 +296,10 @@ bool CEditorMap::Save(class IStorage *pStorage, const char *pFileName)
 					// add the data
 					Item.m_NumQuads = pLayerQuads->m_vQuads.size();
 					Item.m_Data = df.AddDataSwapped(pLayerQuads->m_vQuads.size() * sizeof(CQuad), pLayerQuads->m_vQuads.data());
+
+					if (pLayerQuads->m_Flags & LAYERFLAG_MOVINGTILES) {
+						df.AddDataSwapped(pLayerQuads->m_vMovingTiles.size() * sizeof(CMovingTile), pLayerQuads->m_vMovingTiles.data());
+					}
 
 					// save layer name
 					StrToInts(Item.m_aName, sizeof(Item.m_aName) / sizeof(int), pLayerQuads->m_aName);
@@ -869,6 +874,12 @@ bool CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Stora
 						pQuads->m_vQuads.resize(pQuadsItem->m_NumQuads);
 						mem_copy(pQuads->m_vQuads.data(), pData, sizeof(CQuad) * pQuadsItem->m_NumQuads);
 						DataFile.UnloadData(pQuadsItem->m_Data);
+
+						if (pLayerItem->m_Flags & LAYERFLAG_MOVINGTILES) {
+							void *pMoveData = DataFile.GetDataSwapped(pQuadsItem->m_Data + 1);
+							pQuads->m_vMovingTiles.resize(pQuadsItem->m_NumQuads);
+							mem_copy(pQuads->m_vMovingTiles.data(), pMoveData, sizeof(CMovingTile) * pQuadsItem->m_NumQuads);
+						}
 					}
 					else if(pLayerItem->m_Type == LAYERTYPE_SOUNDS)
 					{

@@ -34,9 +34,10 @@ struct CMovingTileData {
 	int m_ParallaxY;
 	int m_OffsetX;
 	int m_OffsetY;
-	int m_TileType;
+	CMovingTile m_MovingTile;
 	std::array<vec2, 4> m_CurrentPos;
 	bool m_TriangulationPattern;
+	int m_TileType;
 
 	std::tuple<std::array<vec2, 3>, std::array<vec2, 3>> Triangulate() const;
 };

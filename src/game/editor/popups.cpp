@@ -13,7 +13,10 @@
 
 #include <game/client/ui_scrollregion.h>
 
+#include "base/system.h"
 #include "editor.h"
+#include "game/client/ui_rect.h"
+#include "game/mapitems.h"
 
 // popup menu handling
 static struct
@@ -262,6 +265,22 @@ int CEditor::PopupGroup(CEditor *pEditor, CUIRect View, void *pContext)
 		}
 	}
 
+	// new movingtiles layer
+	View.HSplitBottom(5.0f, &View, &Button);
+	View.HSplitBottom(12.0f, &View, &Button);
+	static int s_NewMovingTileLayerButton = 0;
+	if(pEditor->DoButton_Editor(&s_NewMovingTileLayerButton, "Add moving tiles layer", 0, &Button, 0, "Creates a new moving tiles layer"))
+	{
+		CLayer *pQuadLayer = new CLayerQuads;
+		str_copy(pQuadLayer->m_aName, "Moving Tiles");
+		pQuadLayer->m_Flags |= LAYERFLAG_MOVINGTILES;
+		pQuadLayer->m_pEditor = pEditor;
+		pEditor->m_Map.m_vpGroups[pEditor->m_SelectedGroup]->AddLayer(pQuadLayer);
+		pEditor->SelectLayer(pEditor->m_Map.m_vpGroups[pEditor->m_SelectedGroup]->m_vpLayers.size() - 1);
+		pEditor->m_Map.m_vpGroups[pEditor->m_SelectedGroup]->m_Collapse = false;
+		return 1;
+	}
+
 	// new quad layer
 	View.HSplitBottom(5.0f, &View, &Button);
 	View.HSplitBottom(12.0f, &View, &Button);
@@ -488,6 +507,9 @@ int CEditor::PopupLayer(CEditor *pEditor, CUIRect View, void *pContext)
 		aProps[0].m_Type = PROPTYPE_NULL;
 		aProps[2].m_Type = PROPTYPE_NULL;
 	}
+	if(pCurrentLayer->m_Flags & LAYERFLAG_MOVINGTILES) {
+		aProps[2].m_Type = PROPTYPE_NULL;
+	}
 
 	static int s_aIds[NUM_PROPS] = {0};
 	int NewVal = 0;
@@ -521,8 +543,8 @@ int CEditor::PopupLayer(CEditor *pEditor, CUIRect View, void *pContext)
 
 int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 {
-	std::vector<CQuad *> vpQuads = pEditor->GetSelectedQuads();
-	CQuad *pCurrentQuad = vpQuads[pEditor->m_SelectedQuadIndex];
+	auto vpQuads = pEditor->GetSelectedQuads();
+	auto [pCurrentQuad, pCurrentMovingTile] = vpQuads[pEditor->m_SelectedQuadIndex];
 
 	CUIRect Button;
 
@@ -541,7 +563,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 	}
 
 	// aspect ratio button
-	View.HSplitBottom(10.0f, &View, &Button);
+	View.HSplitBottom(6.0f, &View, &Button);
 	View.HSplitBottom(12.0f, &View, &Button);
 	CLayerQuads *pLayer = (CLayerQuads *)pEditor->GetSelectedLayerType(0, LAYERTYPE_QUADS);
 	if(pLayer && pLayer->m_Image >= 0 && (size_t)pLayer->m_Image < pEditor->m_Map.m_vpImages.size())
@@ -549,7 +571,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 		static int s_AspectRatioButton = 0;
 		if(pEditor->DoButton_Editor(&s_AspectRatioButton, "Aspect ratio", 0, &Button, 0, "Resizes the current Quad based on the aspect ratio of the image"))
 		{
-			for(auto &pQuad : vpQuads)
+			for(auto &[pQuad, pMovingTile] : vpQuads)
 			{
 				int Top = pQuad->m_aPoints[0].y;
 				int Left = pQuad->m_aPoints[0].x;
@@ -587,7 +609,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 	static int s_AlignButton = 0;
 	if(pEditor->DoButton_Editor(&s_AlignButton, "Align", 0, &Button, 0, "Aligns coordinates of the quad points"))
 	{
-		for(auto &pQuad : vpQuads)
+		for(auto &[pQuad, pMovingTile] : vpQuads)
 		{
 			for(int k = 1; k < 4; k++)
 			{
@@ -605,7 +627,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 	static int s_Button = 0;
 	if(pEditor->DoButton_Editor(&s_Button, "Square", 0, &Button, 0, "Squares the current quad"))
 	{
-		for(auto &pQuad : vpQuads)
+		for(auto &[pQuad, pMovingTile] : vpQuads)
 		{
 			int Top = pQuad->m_aPoints[0].y;
 			int Left = pQuad->m_aPoints[0].x;
@@ -688,7 +710,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 		pEditor->m_vSelectedQuads[pEditor->m_SelectedQuadIndex] = QuadIndex;
 	}
 
-	for(auto &pQuad : vpQuads)
+	for(auto &[pQuad, pMovingTile] : vpQuads)
 	{
 		if(Prop == PROP_POS_X)
 		{
@@ -732,6 +754,175 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 		}
 		if(Prop == PROP_COLOR_ENV_OFFSET)
 			pQuad->m_ColorEnvOffset = NewVal;
+	}
+
+	std::vector<std::string> entityNames(64, "UNSUPPORTED");
+	entityNames[TILE_SOLID] = "Hookable";
+	entityNames[TILE_DEATH] = "Death";
+	entityNames[TILE_NOHOOK] = "Unhookable";
+	entityNames[TILE_FREEZE] = "Freeze";
+	entityNames[TILE_UNFREEZE] = "Unfreeze";
+
+	std::vector<std::string> teleNames(64, "UNSUPPORTED");
+	teleNames[TILE_TELEINEVIL] = "Red FROM";
+	teleNames[TILE_TELEIN] = "Blue FROM";
+	teleNames[TILE_TELEOUT] = "TO";
+	teleNames[TILE_TELECHECKINEVIL] = "Red CFROM";
+	teleNames[TILE_TELECHECKIN] = "Blue CFROM";
+	teleNames[TILE_TELECHECKOUT] = "CTO";
+	teleNames[TILE_TELECHECK] = "Checkpoint";
+
+	std::vector<std::string> TileTypeNames = {"Game", "Teleport"};
+	CUIRect ViewMovingTiles;
+	View.HSplitTop(10.0f, &Button, &ViewMovingTiles);
+	if(pLayer && pLayer->m_Flags & LAYERFLAG_MOVINGTILES)
+	{
+		ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
+		ViewMovingTiles.HSplitTop(12.0, &Button, &ViewMovingTiles);
+		CUIRect Inc, Dec;
+		Button.VSplitRight(10.0f, &Button, &Inc);
+		Button.VSplitLeft(10.0f, &Dec, &Button);
+		static int s_ValueButton = 0;
+		static int s_ValueDec = 0;
+		static int s_ValueInc = 0;
+		ColorRGBA color(1, 1, 1, 0.5f);
+		bool tile_type_changed = false;
+		pEditor->DoButton_Ex(&s_ValueButton, TileTypeNames[pCurrentMovingTile->m_Skip].c_str(), 0, &Button, 0, "", 0);
+		if (pEditor->DoButton_ButtonDec(&s_ValueDec, "<", 0, &Dec, 0, "")) {
+			if (pCurrentMovingTile->m_Skip > 0) {
+				pCurrentMovingTile->m_Skip--;
+				tile_type_changed = true;
+			} else {
+				pCurrentMovingTile->m_Skip = TileTypeNames.size() - 1;
+				tile_type_changed = true;
+			}
+		}
+		if (pEditor->DoButton_ButtonInc(&s_ValueInc, ">", 0, &Inc, 0, "")) {
+			if (static_cast<size_t>(pCurrentMovingTile->m_Skip) < TileTypeNames.size() - 1) {
+				pCurrentMovingTile->m_Skip++;
+				tile_type_changed = true;
+			} else {
+				pCurrentMovingTile->m_Skip = 0;
+				tile_type_changed = true;
+			}
+		}
+
+		if (tile_type_changed) {
+			pCurrentMovingTile->m_Index = 0;
+			pCurrentMovingTile->m_Flags = 0;
+			pCurrentMovingTile->m_Reserved = 0;
+
+			if (pCurrentMovingTile->m_Skip == 0) {
+				pCurrentMovingTile->m_Index = TILE_SOLID;
+			}
+			else if (pCurrentMovingTile->m_Skip == 1) {
+				pCurrentMovingTile->m_Flags = TILE_TELEINEVIL;
+			}
+		}
+
+		if (pCurrentMovingTile->m_Skip == 0) {
+			ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
+			ViewMovingTiles.HSplitTop(12.0f, &Button, &ViewMovingTiles);
+			static int s_TileIndexButton = 0;
+			static SSelectionPopupContext context;
+			context.POPUP_MAX_WIDTH = 100.0f;
+			context.m_Entries = {
+				"Hookable",
+				"Unhookable",
+				"Freeze",
+				"Unfreeze",
+				"Death"
+			};
+			context.m_IDs.resize(context.m_Entries.size());
+			str_copy(context.m_aMessage, "Select tile");
+			if (pEditor->DoButton_Editor(&s_TileIndexButton, entityNames[pCurrentMovingTile->m_Index].c_str(), 0, &Button, 0, "")) {
+				pEditor->ShowPopupSelection(Button.x, Button.y, &context);
+			}
+
+			if (context.m_pSelection != nullptr) {
+				if (*context.m_pSelection == "Air") {
+					pCurrentMovingTile->m_Index = TILE_AIR;
+				}
+				else if (*context.m_pSelection == "Hookable") {
+					pCurrentMovingTile->m_Index = TILE_SOLID;
+				}
+				else if (*context.m_pSelection == "Unhookable") {
+					pCurrentMovingTile->m_Index = TILE_NOHOOK;
+				}
+				else if (*context.m_pSelection == "Freeze") {
+					pCurrentMovingTile->m_Index = TILE_FREEZE;
+				}
+				else if (*context.m_pSelection == "Unfreeze") {
+					pCurrentMovingTile->m_Index = TILE_UNFREEZE;
+				}
+				else if (*context.m_pSelection == "Death") {
+					pCurrentMovingTile->m_Index = TILE_DEATH;
+				}
+			}
+		}
+
+		if (pCurrentMovingTile->m_Skip == 1) {
+			ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
+			ViewMovingTiles.HSplitTop(12.0f, &Button, &ViewMovingTiles);
+			static SSelectionPopupContext context;
+			context.POPUP_MAX_WIDTH = 100.0f;
+			context.m_Entries = {
+				"Red FROM",
+				"Blue FROM",
+				"TO",
+				"Red CFROM",
+				"Blue CFROM",
+				"CTO",
+				"Checkpoint"
+			};
+			context.m_IDs.resize(context.m_Entries.size());
+			str_copy(context.m_aMessage, "Select tile");
+			static int s_TeleTypeButton = 0;
+			if (pEditor->DoButton_Editor(&s_TeleTypeButton, teleNames[pCurrentMovingTile->m_Flags].c_str(), 0, &Button, 0, "")) {
+				pEditor->ShowPopupSelection(Button.x, Button.y, &context);
+			}
+
+			if (context.m_pSelection != nullptr) {
+				if (*context.m_pSelection == "Red FROM") {
+					pCurrentMovingTile->m_Flags = TILE_TELEINEVIL;
+				}
+				else if (*context.m_pSelection == "Blue FROM") {
+					pCurrentMovingTile->m_Flags = TILE_TELEIN;
+				}
+				else if (*context.m_pSelection == "TO") {
+					pCurrentMovingTile->m_Flags = TILE_TELEOUT;
+				}
+				else if (*context.m_pSelection == "Red CFROM") {
+					pCurrentMovingTile->m_Flags = TILE_TELECHECKINEVIL;
+				}
+				else if (*context.m_pSelection == "Blue CFROM") {
+					pCurrentMovingTile->m_Flags = TILE_TELECHECKIN;
+				}
+				else if (*context.m_pSelection == "CTO") {
+					pCurrentMovingTile->m_Flags = TILE_TELECHECKOUT;
+				}
+				else if (*context.m_pSelection == "Checkpoint") {
+					pCurrentMovingTile->m_Flags = TILE_TELECHECK;
+				}
+			}
+			
+			ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
+			ViewMovingTiles.HSplitTop(12.0, &Button, &ViewMovingTiles);
+			Button.VSplitRight(10.0f, &Button, &Inc);
+			Button.VSplitLeft(10.0f, &Dec, &Button);
+			static int s_value_selector = 0;
+			static int s_value_dec = 0;
+			static int s_value_inc = 0;
+			int new_val_tp = pEditor->UiDoValueSelector(&s_value_selector, &Button, "", pCurrentMovingTile->m_Index, 0, 256, 1, 1.0f, "", false, false, 0, &color);
+			if (pEditor->DoButton_ButtonDec(&s_value_dec, nullptr, 0, &Dec, 0, "")) {
+				new_val_tp--;
+			}
+			if (pEditor->DoButton_ButtonInc(&s_value_inc, nullptr, 0, &Inc, 0, "")) {
+				new_val_tp++;
+			}
+			pCurrentMovingTile->m_Index = new_val_tp;
+		}
+
 	}
 
 	return 0;
@@ -939,8 +1130,8 @@ int CEditor::PopupSource(CEditor *pEditor, CUIRect View, void *pContext)
 
 int CEditor::PopupPoint(CEditor *pEditor, CUIRect View, void *pContext)
 {
-	std::vector<CQuad *> vpQuads = pEditor->GetSelectedQuads();
-	CQuad *pCurrentQuad = vpQuads[pEditor->m_SelectedQuadIndex];
+	auto vpQuads = pEditor->GetSelectedQuads();
+	auto [pCurrentQuad, pCurrentMovingTile] = vpQuads[pEditor->m_SelectedQuadIndex];
 
 	enum
 	{
@@ -978,7 +1169,7 @@ int CEditor::PopupPoint(CEditor *pEditor, CUIRect View, void *pContext)
 	if(Prop != -1)
 		pEditor->m_Map.m_Modified = true;
 
-	for(auto &pQuad : vpQuads)
+	for(auto &[pQuad, pMovingTile] : vpQuads)
 	{
 		if(Prop == PROP_POS_X)
 		{
@@ -1391,6 +1582,7 @@ int CEditor::PopupSelectGametileOp(CEditor *pEditor, CUIRect View, void *pContex
 		"Live Freeze",
 		"Live Unfreeze",
 	};
+	static int s_aButtonIDs[std::size(s_apButtonNames)];
 	static unsigned s_NumButtons = std::size(s_apButtonNames);
 	CUIRect Button;
 
@@ -1398,8 +1590,10 @@ int CEditor::PopupSelectGametileOp(CEditor *pEditor, CUIRect View, void *pContex
 	{
 		View.HSplitTop(2.0f, nullptr, &View);
 		View.HSplitTop(12.0f, &Button, &View);
-		if(pEditor->DoButton_Editor(&s_apButtonNames[i], s_apButtonNames[i], 0, &Button, 0, nullptr))
+		if(pEditor->DoButton_Editor(&s_aButtonIDs[i], s_apButtonNames[i], 0, &Button, 0, nullptr)) {
 			s_GametileOpSelected = i;
+			return 1;
+		}
 	}
 
 	return 0;
@@ -1951,7 +2145,7 @@ int CEditor::PopupSelection(CEditor *pEditor, CUIRect View, void *pContext)
 	SSelectionPopupContext *pSelectionPopup = static_cast<SSelectionPopupContext *>(pContext);
 
 	CUIRect Slot;
-	const int LineCount = pEditor->TextRender()->TextLineCount(SSelectionPopupContext::POPUP_FONT_SIZE, pSelectionPopup->m_aMessage, SSelectionPopupContext::POPUP_MAX_WIDTH);
+	const int LineCount = pEditor->TextRender()->TextLineCount(SSelectionPopupContext::POPUP_FONT_SIZE, pSelectionPopup->m_aMessage, pSelectionPopup->POPUP_MAX_WIDTH);
 	View.HSplitTop(LineCount * SSelectionPopupContext::POPUP_FONT_SIZE, &Slot, &View);
 
 	CTextCursor Cursor;
@@ -1959,12 +2153,12 @@ int CEditor::PopupSelection(CEditor *pEditor, CUIRect View, void *pContext)
 	Cursor.m_LineWidth = Slot.w;
 	pEditor->TextRender()->TextEx(&Cursor, pSelectionPopup->m_aMessage, -1);
 
-	for(const auto &Entry : pSelectionPopup->m_Entries)
+	for(size_t i = 0; i < pSelectionPopup->m_Entries.size(); i++)
 	{
 		View.HSplitTop(SSelectionPopupContext::POPUP_ENTRY_SPACING, nullptr, &View);
 		View.HSplitTop(SSelectionPopupContext::POPUP_ENTRY_HEIGHT, &Slot, &View);
-		if(pEditor->DoButton_MenuItem(&Entry, Entry.c_str(), 0, &Slot, 0, nullptr))
-			pSelectionPopup->m_pSelection = &Entry;
+		if(pEditor->DoButton_MenuItem(&pSelectionPopup->m_IDs[i], pSelectionPopup->m_Entries[i].c_str(), 0, &Slot, 0, nullptr))
+			pSelectionPopup->m_pSelection = &pSelectionPopup->m_Entries[i];
 	}
 
 	return pSelectionPopup->m_pSelection == nullptr ? 0 : 1;
@@ -1972,8 +2166,9 @@ int CEditor::PopupSelection(CEditor *pEditor, CUIRect View, void *pContext)
 
 void CEditor::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 {
-	const int LineCount = TextRender()->TextLineCount(SSelectionPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, SSelectionPopupContext::POPUP_MAX_WIDTH);
+	SSelectionPopupContext *pSelectionPopup = static_cast<SSelectionPopupContext *>(pContext);
+	const int LineCount = TextRender()->TextLineCount(SSelectionPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, pSelectionPopup->POPUP_MAX_WIDTH);
 	const float PopupHeight = LineCount * SSelectionPopupContext::POPUP_FONT_SIZE + pContext->m_Entries.size() * (SSelectionPopupContext::POPUP_ENTRY_HEIGHT + SSelectionPopupContext::POPUP_ENTRY_SPACING) + 10.0f;
 	pContext->m_pSelection = nullptr;
-	UiInvokePopupMenu(pContext, 0, X, Y, SSelectionPopupContext::POPUP_MAX_WIDTH + 10.0f, PopupHeight, PopupSelection, pContext);
+	UiInvokePopupMenu(pContext, 0, X, Y, pSelectionPopup->POPUP_MAX_WIDTH + 10.0f, PopupHeight, PopupSelection, pContext);
 }

@@ -202,6 +202,7 @@ enum
 	ROTATION_270 = (TILEFLAG_XFLIP | TILEFLAG_YFLIP | TILEFLAG_ROTATE),
 
 	LAYERFLAG_DETAIL = 1,
+	LAYERFLAG_MOVINGTILES = 2,
 	TILESLAYERFLAG_GAME = 1,
 	TILESLAYERFLAG_TELE = 2,
 	TILESLAYERFLAG_SPEEDUP = 4,
@@ -226,6 +227,13 @@ struct CQuad
 
 	int m_ColorEnv;
 	int m_ColorEnvOffset;
+};
+
+struct CMovingTile {
+	unsigned char m_Index; // entity: index, tele: tp number
+	unsigned char m_Flags; // tele: type
+	unsigned char m_Skip; // 0: entity, 1: tele
+	unsigned char m_Reserved;
 };
 
 class CTile

@@ -5,6 +5,7 @@
 #include <engine/graphics.h>
 
 #include "editor.h"
+#include "game/mapitems.h"
 #include <game/client/render.h>
 
 CLayerQuads::CLayerQuads()
@@ -40,6 +41,15 @@ CQuad *CLayerQuads::NewQuad(int x, int y, int Width, int Height)
 	m_pEditor->m_Map.m_Modified = true;
 
 	m_vQuads.emplace_back();
+	if (m_Flags & LAYERFLAG_MOVINGTILES) {
+		m_vMovingTiles.push_back({
+			TILE_SOLID,
+			0,
+			0,
+			0
+		});
+	}
+
 	CQuad *pQuad = &m_vQuads[m_vQuads.size() - 1];
 
 	pQuad->m_PosEnv = -1;

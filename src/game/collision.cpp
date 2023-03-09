@@ -186,11 +186,14 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 
 		for (int index_layer = 0; index_layer < group->m_NumLayers; index_layer++) {
 			CMapItemLayer* layer = pLayers->GetLayer(group->m_StartLayer + index_layer);
-			// if (layer->m_Type == LAYERTYPE_QUADS && layer->m_Flags & LAYERFLAG_MOVING_TILES) { // TODO: use this + flag which type of moving tiles
-			if (layer->m_Type == LAYERTYPE_QUADS) {
-				// TODO: assert parazoom is off
+			if (layer->m_Type == LAYERTYPE_QUADS && layer->m_Flags & LAYERFLAG_MOVINGTILES) {
+				
+				// TODO: assert that parazoom is off
+
 				auto* layer_quads = reinterpret_cast<CMapItemLayerQuads*>(layer);
 				auto* quad_array = static_cast<CQuad*>(pMap->GetDataSwapped(layer_quads->m_Data));
+				auto* moving_tile_info = static_cast<CMovingTile*>(pMap->GetDataSwapped(layer_quads->m_Data + 1));
+
 				for (int index_quad = 0; index_quad < layer_quads->m_NumQuads; index_quad++) {
 					// TODO: assert that envelope is synchronized
 					int StartEnvelopes, NumEnvelopes;
@@ -212,11 +215,11 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 						group->m_ParallaxX,
 						group->m_ParallaxY,
 						group->m_OffsetX,
-						group->m_OffsetY
+						group->m_OffsetY,
+						moving_tile_info[index_quad]
 					});
 
 					m_pMovingTiles.back().m_TriangulationPattern = calculate_triangulation(m_pMovingTiles.back().m_Pos);
-					m_pMovingTiles.back().m_TileType = TILE_SOLID;
 				}
 			}
 		}

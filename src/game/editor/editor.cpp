@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include "game/mapitems.h"
 #include <algorithm>
 
 #include <base/color.h>
@@ -732,15 +733,15 @@ CLayer *CEditor::GetSelectedLayerType(int Index, int Type) const
 	return nullptr;
 }
 
-std::vector<CQuad *> CEditor::GetSelectedQuads()
+std::vector<std::tuple<CQuad *, CMovingTile *>> CEditor::GetSelectedQuads()
 {
 	CLayerQuads *pQuadLayer = (CLayerQuads *)GetSelectedLayerType(0, LAYERTYPE_QUADS);
-	std::vector<CQuad *> vpQuads;
+	std::vector<std::tuple<CQuad *, CMovingTile *>> vpQuads;
 	if(!pQuadLayer)
 		return vpQuads;
 	vpQuads.resize(m_vSelectedQuads.size());
 	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i)
-		vpQuads[i] = &pQuadLayer->m_vQuads[m_vSelectedQuads[i]];
+		vpQuads[i] = {&pQuadLayer->m_vQuads[m_vSelectedQuads[i]], &pQuadLayer->m_vMovingTiles[m_vSelectedQuads[i]]};
 	return vpQuads;
 }
 
@@ -786,6 +787,7 @@ void CEditor::DeleteSelectedQuads()
 	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i)
 	{
 		pLayer->m_vQuads.erase(pLayer->m_vQuads.begin() + m_vSelectedQuads[i]);
+		pLayer->m_vMovingTiles.erase(pLayer->m_vMovingTiles.begin() + m_vSelectedQuads[i]);
 		for(int j = i + 1; j < (int)m_vSelectedQuads.size(); ++j)
 			if(m_vSelectedQuads[j] > m_vSelectedQuads[i])
 				m_vSelectedQuads[j]--;
@@ -1291,7 +1293,8 @@ void CEditor::DoToolbar(CUIRect ToolBar)
 
 			if(pLayer->m_Type == LAYERTYPE_QUADS)
 			{
-				Invoked = DoButton_Editor(&s_AddItemButton, "Add Quad", 0, &Button, 0, "[ctrl+q] Add a new quad") ||
+				std::string s = pLayer->m_Flags & LAYERFLAG_MOVINGTILES ? "Add Tile" : "Add Quad";
+				Invoked = DoButton_Editor(&s_AddItemButton, s.c_str(), 0, &Button, 0, "[ctrl+q] Add a new quad") ||
 					  (m_Dialog == DIALOG_NONE && m_EditBoxActive == 0 && Input()->KeyPress(KEY_Q) && ModPressed);
 			}
 			else if(pLayer->m_Type == LAYERTYPE_SOUNDS)
@@ -1565,8 +1568,9 @@ void CEditor::DoQuad(CQuad *pQuad, int Index)
 				{
 					m_SelectedQuadIndex = FindSelectedQuadIndex(Index);
 
+					// TODO Marmare: how big should this be?
 					static int s_QuadPopupID = 0;
-					UiInvokePopupMenu(&s_QuadPopupID, 0, UI()->MouseX(), UI()->MouseY(), 120, 198, PopupQuad);
+					UiInvokePopupMenu(&s_QuadPopupID, 0, UI()->MouseX(), UI()->MouseY(), 120, 262, PopupQuad);
 					m_LockMouse = false;
 				}
 				s_Operation = OP_NONE;
@@ -3153,6 +3157,7 @@ int CEditor::DoProperties(CUIRect *pToolBox, CProperty *pProps, int *pIDs, int *
 		CUIRect Label, Shifter;
 		Slot.VSplitMid(&Label, &Shifter);
 		Shifter.HMargin(1.0f, &Shifter);
+
 		UI()->DoLabel(&Label, pProps[i].m_pName, 10.0f, TEXTALIGN_LEFT);
 
 		if(pProps[i].m_Type == PROPTYPE_INT_STEP)
@@ -3606,7 +3611,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 
 					static int s_GroupPopupId = 0;
 					if(Result == 2)
-						UiInvokePopupMenu(&s_GroupPopupId, 0, UI()->MouseX(), UI()->MouseY(), 145, 256, PopupGroup);
+						UiInvokePopupMenu(&s_GroupPopupId, 0, UI()->MouseX(), UI()->MouseY(), 145, 272, PopupGroup);
 
 					if(!m_Map.m_vpGroups[g]->m_vpLayers.empty() && Input()->MouseDoubleClick())
 						m_Map.m_vpGroups[g]->m_Collapse ^= 1;
@@ -4120,7 +4125,6 @@ bool CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 	{
 		pEditor->m_PopupEventType = POPEVENT_IMAGE_MAX;
 		pEditor->m_PopupEventActivated = true;
-		return false;
 	}
 
 	CEditorImage ImgInfo(pEditor);
@@ -4318,7 +4322,11 @@ int CEditor::PopupImage(CEditor *pEditor, CUIRect View, void *pContext)
 		char aFilename[IO_MAX_PATH_LENGTH];
 		str_format(aFilename, sizeof(aFilename), "%s.png", pImg->m_aName);
 		s_SelectionPopupContext.Reset();
-		pEditor->Storage()->FindFiles(aFilename, "mapres", IStorage::TYPE_ALL, &s_SelectionPopupContext.m_Entries);
+		std::set<std::string> file_set;
+		pEditor->Storage()->FindFiles(aFilename, "mapres", IStorage::TYPE_ALL, &file_set);
+		s_SelectionPopupContext.m_Entries.clear();
+		s_SelectionPopupContext.m_Entries.insert(s_SelectionPopupContext.m_Entries.begin(), file_set.begin(), file_set.end());
+		s_SelectionPopupContext.m_Entries.resize(file_set.size());
 		if(s_SelectionPopupContext.m_Entries.empty())
 		{
 			static SMessagePopupContext s_MessagePopupContext;
@@ -4383,7 +4391,11 @@ int CEditor::PopupSound(CEditor *pEditor, CUIRect View, void *pContext)
 		char aFilename[IO_MAX_PATH_LENGTH];
 		str_format(aFilename, sizeof(aFilename), "%s.opus", pSound->m_aName);
 		s_SelectionPopupContext.Reset();
-		pEditor->Storage()->FindFiles(aFilename, "mapres", IStorage::TYPE_ALL, &s_SelectionPopupContext.m_Entries);
+		std::set<std::string> file_set;
+		pEditor->Storage()->FindFiles(aFilename, "mapres", IStorage::TYPE_ALL, &file_set);
+		s_SelectionPopupContext.m_Entries.clear();
+		s_SelectionPopupContext.m_Entries.insert(s_SelectionPopupContext.m_Entries.begin(), file_set.begin(), file_set.end());
+		s_SelectionPopupContext.m_Entries.resize(file_set.size());
 		if(s_SelectionPopupContext.m_Entries.empty())
 		{
 			static SMessagePopupContext s_MessagePopupContext;

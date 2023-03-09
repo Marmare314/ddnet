@@ -708,6 +708,7 @@ public:
 
 	int m_Image;
 	std::vector<CQuad> m_vQuads;
+	std::vector<CMovingTile> m_vMovingTiles;
 };
 
 class CLayerGame : public CLayerTiles
@@ -913,7 +914,9 @@ public:
 
 	void ResetMenuBackgroundPositions();
 
-	std::vector<CQuad *> GetSelectedQuads();
+	void ResetMenuBackgroundPositions();
+
+	std::vector<std::tuple<CQuad *, CMovingTile *>> GetSelectedQuads();
 	CLayer *GetSelectedLayerType(int Index, int Type) const;
 	CLayer *GetSelectedLayer(int Index) const;
 	CLayerGroup *GetSelectedGroup() const;
@@ -1254,12 +1257,13 @@ public:
 
 	struct SSelectionPopupContext
 	{
-		static constexpr float POPUP_MAX_WIDTH = 300.0f;
+		float POPUP_MAX_WIDTH = 300.0f;
 		static constexpr float POPUP_FONT_SIZE = 10.0f;
 		static constexpr float POPUP_ENTRY_HEIGHT = 12.0f;
 		static constexpr float POPUP_ENTRY_SPACING = 5.0f;
 		char m_aMessage[256];
-		std::set<std::string> m_Entries;
+		std::vector<std::string> m_Entries;
+		std::vector<int> m_IDs;
 		const std::string *m_pSelection;
 
 		SSelectionPopupContext();
