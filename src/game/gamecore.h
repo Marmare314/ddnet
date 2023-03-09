@@ -14,6 +14,7 @@
 #include <engine/shared/protocol.h>
 #include <game/generated/protocol.h>
 
+#include "game/collision.h"
 #include "prng.h"
 
 class CCollision;
@@ -239,12 +240,12 @@ public:
 	int m_HookedPlayer;
 	std::set<int> m_AttachedPlayers;
 	void SetHookedPlayer(int HookedPlayer);
-	int m_HookedMovingTileId;
+	const CMovingTileData* m_HookedMovingTile;
 	vec2 m_InitialMovingTileHookPos;
 	int m_InitialMovingTileHookTick;
 
-	bool m_GroundedQuadLast;
-	int m_GroundedQuadId;
+	bool m_GroundedMovingTileLastTick;
+	const CMovingTileData* m_GroundedMovingTile;
 
 	int m_ActiveWeapon;
 	struct WeaponStat

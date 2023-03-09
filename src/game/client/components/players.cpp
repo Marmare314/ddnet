@@ -203,9 +203,9 @@ void CPlayers::RenderHookCollLine(
 				int Tick = (m_pClient->m_aClients[ClientID].m_IsPredicted) ? Client()->PredGameTick(g_Config.m_ClDummy) : Client()->GameTick(g_Config.m_ClDummy);
 				// TODO: are intraticks needed?
 				// Collision()->Tick(Tick, IntraTick); // this would make the hookline not accurate
-				auto [Hit, moving_tile_id] = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0, &TeleNr, Position);
-				if (moving_tile_id >= 0) {
-					FinishPos = Collision()->UpdateHookPos(FinishPos, Tick, Tick, moving_tile_id, Position);
+				auto [Hit, moving_tile] = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0, &TeleNr, Position);
+				if (moving_tile != nullptr) {
+					FinishPos = Collision()->UpdateHookPos(FinishPos, Tick, Tick, moving_tile, Position);
 				}
 
 				if(!DoBreak && Hit)
@@ -413,8 +413,8 @@ void CPlayers::RenderPlayer(
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
 	vec2 player_coll_check(Player.m_X, Player.m_Y + 16);
-	auto [tile_id, moving_tile_id] = Collision()->GetQuadCollisionAt(&player_coll_check, vec2(Player.m_X, Player.m_Y));
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16) && !(tile_id == TILE_SOLID || tile_id == TILE_NOHOOK);
+	const auto* moving_tile = Collision()->GetQuadCollisionAt(player_coll_check, vec2(Player.m_X, Player.m_Y));
+	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16) && !(moving_tile && moving_tile->IsSolid());
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = m_pClient->m_aClients[ClientID].m_Afk || m_pClient->m_aClients[ClientID].m_Paused;

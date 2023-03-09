@@ -37,9 +37,12 @@ struct CMovingTileData {
 	CMovingTile m_MovingTile;
 	std::array<vec2, 4> m_CurrentPos;
 	bool m_TriangulationPattern;
-	int m_TileType;
 
 	std::tuple<std::array<vec2, 3>, std::array<vec2, 3>> Triangulate() const;
+	bool IsSolid() const;
+	bool IsThrough(int dx, int dy, vec2 Pos0, vec2 Pos1) const;
+	int GetTileIndex() const;
+	bool IsHookBlocker(vec2 Pos0, vec2 Pos1) const;
 };
 
 class CCollision
@@ -63,7 +66,7 @@ public:
 	int GetHeight() const { return m_Height; }
 	int IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
 	int IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const;
-	std::tuple<int, int> IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr, vec2 player_pos) const;
+	std::tuple<int, const CMovingTileData*> IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr, vec2 player_pos) const;
 	void MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces) const;
 	void MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity) const;
 	bool TestBox(vec2 Pos, vec2 Size) const;
@@ -140,13 +143,15 @@ public:
 	int m_HighestSwitchNumber;
 
 	void Tick(int pTick, float intraTick = 0);
-	std::tuple<int, int> GetQuadCollisionAt(vec2* Pos, vec2 player_pos) const;
-	vec2 UpdateHookPos(vec2 initial_hook_pos, int hook_tick, int pTick, int moving_tile_id, vec2 player_pos) const;
-	vec2 ApplyParaToHook(vec2 initial_hook_pos, int tick, int moving_tile_id, vec2 player_pos) const;
-	bool TestBoxQuad(vec2 Pos, vec2 Size) const;
+	const CMovingTileData* GetQuadCollisionAt(vec2 hook_pos, vec2 player_pos) const;
+	vec2 UpdateHookPos(vec2 initial_hook_pos, int hook_tick, int pTick, const CMovingTileData* moving_tile, vec2 player_pos) const;
+	vec2 ApplyParaToHook(vec2 initial_hook_pos, int tick, const CMovingTileData* moving_tile, vec2 player_pos) const;
+	bool TestBoxQuad(vec2 Pos, vec2 Size, bool border = false, const CMovingTileData* movingTile = nullptr) const;
 	void MoveBoxOutQuad(vec2 *pInoutPos, vec2 Size) const;
-	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, int quad_id, vec2 Size) const;
+	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, const CMovingTileData* quad_id, vec2 Size) const;
 	std::vector<int> GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos, float Radius) const;
+	const CMovingTileData* CheckPointQuadRectangular(vec2 Pos, vec2 player_pos, bool border, const CMovingTileData* movingTile) const;
+	void MoveBoxQuad(vec2 old_pos, vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size) const;
 
 private:
 	class CTeleTile *m_pTele;

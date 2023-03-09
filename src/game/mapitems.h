@@ -229,6 +229,7 @@ struct CQuad
 	int m_ColorEnvOffset;
 };
 
+// TODO Marmare: rename these, we only need 3 of them
 struct CMovingTile {
 	unsigned char m_Index; // entity: index, tele: tp number
 	unsigned char m_Flags; // tele: type
