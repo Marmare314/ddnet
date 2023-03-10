@@ -756,14 +756,16 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 			pQuad->m_ColorEnvOffset = NewVal;
 	}
 
-	std::vector<std::string> entityNames(64, "UNSUPPORTED");
+	std::vector<std::string> entityNames(256, "UNSUPPORTED");
 	entityNames[TILE_SOLID] = "Hookable";
 	entityNames[TILE_DEATH] = "Death";
 	entityNames[TILE_NOHOOK] = "Unhookable";
 	entityNames[TILE_FREEZE] = "Freeze";
 	entityNames[TILE_UNFREEZE] = "Unfreeze";
+	entityNames[TILE_THROUGH_ALL] = "Hookthrough";
+	entityNames[TILE_THROUGH_DIR] = "Dir Hookthrough";
 
-	std::vector<std::string> teleNames(64, "UNSUPPORTED");
+	std::vector<std::string> teleNames(256, "UNSUPPORTED");
 	teleNames[TILE_TELEINEVIL] = "Red FROM";
 	teleNames[TILE_TELEIN] = "Blue FROM";
 	teleNames[TILE_TELEOUT] = "TO";
@@ -830,6 +832,8 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 			context.m_Entries = {
 				"Hookable",
 				"Unhookable",
+				"Hookthrough",
+				"Dir Hookthrough",
 				"Freeze",
 				"Unfreeze",
 				"Death"
@@ -841,10 +845,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 			}
 
 			if (context.m_pSelection != nullptr) {
-				if (*context.m_pSelection == "Air") {
-					pCurrentMovingTile->m_Index = TILE_AIR;
-				}
-				else if (*context.m_pSelection == "Hookable") {
+				if (*context.m_pSelection == "Hookable") {
 					pCurrentMovingTile->m_Index = TILE_SOLID;
 				}
 				else if (*context.m_pSelection == "Unhookable") {
@@ -859,6 +860,40 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 				else if (*context.m_pSelection == "Death") {
 					pCurrentMovingTile->m_Index = TILE_DEATH;
 				}
+				else if (*context.m_pSelection == "Hookthrough") {
+					pCurrentMovingTile->m_Index = TILE_THROUGH_ALL;
+				}
+				else if (*context.m_pSelection == "Dir Hookthrough") {
+					pCurrentMovingTile->m_Index = TILE_THROUGH_DIR;
+				}
+			}
+			context.m_pSelection = nullptr;
+
+			if (pCurrentMovingTile->m_Index == TILE_THROUGH_DIR) {
+				ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
+				ViewMovingTiles.HSplitTop(12.0, &Button, &ViewMovingTiles);
+				Button.VSplitRight(10.0f, &Button, &Inc);
+				Button.VSplitLeft(10.0f, &Dec, &Button);
+				static int s_RotationSelector = 0;
+				static int s_ValueDecRotation = 0;
+				static int s_ValueIncRotation = 0;
+				int new_val_rotation = pEditor->UiDoValueSelector(&s_RotationSelector, &Button, "", pCurrentMovingTile->m_Reserved * 90, 0, 270, 90, 1.0f, "", false, false, 0, &color);
+				if (pEditor->DoButton_ButtonDec(&s_ValueDecRotation, nullptr, 0, &Dec, 0, "")) {
+					if (new_val_rotation > 0) {
+						new_val_rotation -= 90;
+					} else {
+						new_val_rotation = 270;
+					}
+				}
+				if (pEditor->DoButton_ButtonInc(&s_ValueIncRotation, nullptr, 0, &Inc, 0, "")) {
+					if (new_val_rotation < 270) {
+						new_val_rotation += 90;
+					} else {
+						new_val_rotation = 0;
+					}
+				}
+
+				pCurrentMovingTile->m_Reserved = new_val_rotation / 90;
 			}
 		}
 
@@ -906,6 +941,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 					pCurrentMovingTile->m_Flags = TILE_TELECHECK;
 				}
 			}
+			context.m_pSelection = nullptr;
 			
 			ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
 			ViewMovingTiles.HSplitTop(12.0, &Button, &ViewMovingTiles);
@@ -923,7 +959,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 			}
 			pCurrentMovingTile->m_Index = new_val_tp;
 		}
-
+		// TODO Marmare: copy settings to other selected quads
 	}
 
 	return 0;

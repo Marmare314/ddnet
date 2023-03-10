@@ -740,8 +740,9 @@ std::vector<std::tuple<CQuad *, CMovingTile *>> CEditor::GetSelectedQuads()
 	if(!pQuadLayer)
 		return vpQuads;
 	vpQuads.resize(m_vSelectedQuads.size());
-	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i)
+	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i) {
 		vpQuads[i] = {&pQuadLayer->m_vQuads[m_vSelectedQuads[i]], &pQuadLayer->m_vMovingTiles[m_vSelectedQuads[i]]};
+	}
 	return vpQuads;
 }
 
@@ -787,7 +788,9 @@ void CEditor::DeleteSelectedQuads()
 	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i)
 	{
 		pLayer->m_vQuads.erase(pLayer->m_vQuads.begin() + m_vSelectedQuads[i]);
-		pLayer->m_vMovingTiles.erase(pLayer->m_vMovingTiles.begin() + m_vSelectedQuads[i]);
+		if (pLayer->m_Flags & LAYERFLAG_MOVINGTILES) {
+			pLayer->m_vMovingTiles.erase(pLayer->m_vMovingTiles.begin() + m_vSelectedQuads[i]);
+		}
 		for(int j = i + 1; j < (int)m_vSelectedQuads.size(); ++j)
 			if(m_vSelectedQuads[j] > m_vSelectedQuads[i])
 				m_vSelectedQuads[j]--;

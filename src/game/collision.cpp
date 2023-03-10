@@ -44,8 +44,27 @@ bool CMovingTileData::IsSolid() const {
 	return false;
 }
 
-bool CMovingTileData::IsThrough(int dx, int dy, vec2 Pos0, vec2 Pos1) const {
-	return false; // TODO Marmare: implement
+bool CMovingTileData::IsThrough(vec2 Pos0, vec2 Pos1) const {
+	if (m_MovingTile.m_Skip == 0) {
+		if (m_MovingTile.m_Index == TILE_THROUGH_ALL) {
+			return true;
+		}
+		if (m_MovingTile.m_Index == TILE_THROUGH_DIR) {
+			if (m_MovingTile.m_Reserved == 0 && Pos0.y > Pos1.y) {
+				return true;
+			}
+			if (m_MovingTile.m_Reserved == 1 && Pos0.x < Pos1.x) {
+				return true;
+			}
+			if (m_MovingTile.m_Reserved == 2 && Pos0.y < Pos1.y) {
+				return true;
+			}
+			if (m_MovingTile.m_Reserved == 3 && Pos0.x > Pos1.x) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 int CMovingTileData::GetTileIndex() const {
@@ -218,6 +237,8 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 	}
 
 	// Moving tiles
+	m_pMovingTiles.clear();
+
 	int StartGroups, NumGroups;
 	pMap->GetType(MAPITEMTYPE_GROUP, &StartGroups, &NumGroups);
 
@@ -456,6 +477,7 @@ const CMovingTileData* CCollision::CheckPointQuadRectangular(vec2 Pos, vec2 play
 
 const CMovingTileData* CCollision::GetQuadCollisionAt(vec2 Pos, vec2 player_pos) const {
 	for (const auto& movingTile : m_pMovingTiles) {
+		// TODO Marmare: could be made more efficient for solid tiles
 		auto [triangle_1, triangle_2] = movingTile.Triangulate();
 		triangle_1 = apply_para_to_triangle(triangle_1, player_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
 		triangle_2 = apply_para_to_triangle(triangle_2, player_pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
@@ -720,7 +742,7 @@ std::tuple<int, const CMovingTileData*> CCollision::IntersectLineTeleHook(vec2 P
 		}
 		else if(moving_tile = GetQuadCollisionAt(Pos, player_pos); moving_tile != nullptr) {
 			if (moving_tile->IsSolid()) {
-				if (!moving_tile->IsThrough(dx, dy, Pos0, Pos1)) {
+				if (!moving_tile->IsThrough(Pos0, Pos1)) {
 					hit = moving_tile->GetTileIndex();
 				}
 				else if (moving_tile->IsHookBlocker(Pos0, Pos1)) {

@@ -40,7 +40,7 @@ struct CMovingTileData {
 
 	std::tuple<std::array<vec2, 3>, std::array<vec2, 3>> Triangulate() const;
 	bool IsSolid() const;
-	bool IsThrough(int dx, int dy, vec2 Pos0, vec2 Pos1) const;
+	bool IsThrough(vec2 Pos0, vec2 Pos1) const;
 	int GetTileIndex() const;
 	bool IsHookBlocker(vec2 Pos0, vec2 Pos1) const;
 	int GetTeleportNumber(int type) const;

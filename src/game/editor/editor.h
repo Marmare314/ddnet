@@ -914,8 +914,6 @@ public:
 
 	void ResetMenuBackgroundPositions();
 
-	void ResetMenuBackgroundPositions();
-
 	std::vector<std::tuple<CQuad *, CMovingTile *>> GetSelectedQuads();
 	CLayer *GetSelectedLayerType(int Index, int Type) const;
 	CLayer *GetSelectedLayer(int Index) const;
