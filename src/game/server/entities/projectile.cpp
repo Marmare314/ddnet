@@ -271,7 +271,7 @@ void CProjectile::Tick()
 	int x = GameServer()->Collision()->GetIndex(PrevPos, CurPos);
 	int z;
 	if(g_Config.m_SvOldTeleportWeapons)
-		z = GameServer()->Collision()->IsTeleport(x);
+		z = GameServer()->Collision()->IsTeleport(x, nullptr);
 	else
 		z = GameServer()->Collision()->IsTeleportWeapon(x);
 	CGameControllerDDRace *pControllerDDRace = (CGameControllerDDRace *)GameServer()->m_pController;

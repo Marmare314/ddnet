@@ -43,6 +43,8 @@ struct CMovingTileData {
 	bool IsThrough(int dx, int dy, vec2 Pos0, vec2 Pos1) const;
 	int GetTileIndex() const;
 	bool IsHookBlocker(vec2 Pos0, vec2 Pos1) const;
+	int GetTeleportNumber(int type) const;
+	bool IsTimeCheckpoint() const;
 };
 
 class CCollision
@@ -108,13 +110,13 @@ public:
 	int GetFTileIndex(int Index) const;
 	int GetTileFlags(int Index) const;
 	int GetFTileFlags(int Index) const;
-	int IsTeleport(int Index) const;
-	int IsEvilTeleport(int Index) const;
-	int IsCheckTeleport(int Index) const;
-	int IsCheckEvilTeleport(int Index) const;
+	int IsTeleport(int Index, const CMovingTileData* pMovingTile) const;
+	int IsEvilTeleport(int Index, const CMovingTileData* pMovingTile) const;
+	int IsCheckTeleport(int Index, const CMovingTileData* pMovingTile) const;
+	int IsCheckEvilTeleport(int Index, const CMovingTileData* pMovingTile) const;
 	int IsTeleportWeapon(int Index) const;
 	int IsTeleportHook(int Index) const;
-	int IsTeleCheckpoint(int Index) const;
+	int IsTeleCheckpoint(int Index, const CMovingTileData* pMovingTile) const;
 	int IsSpeedup(int Index) const;
 	int IsTune(int Index) const;
 	void GetSpeedup(int Index, vec2 *pDir, int *pForce, int *pMaxSpeed) const;
@@ -129,7 +131,7 @@ public:
 	int IsNoLaser(int x, int y) const;
 	int IsFNoLaser(int x, int y) const;
 
-	int IsTimeCheckpoint(int Index) const;
+	int IsTimeCheckpoint(int Index, const CMovingTileData* pMovingTile) const;
 	int IsFTimeCheckpoint(int Index) const;
 
 	int IsMover(int x, int y, int *pFlags) const;
@@ -148,8 +150,8 @@ public:
 	vec2 ApplyParaToHook(vec2 initial_hook_pos, int tick, const CMovingTileData* moving_tile, vec2 player_pos) const;
 	bool TestBoxQuad(vec2 Pos, vec2 Size, bool border = false, const CMovingTileData* movingTile = nullptr) const;
 	void MoveBoxOutQuad(vec2 *pInoutPos, vec2 Size) const;
-	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, const CMovingTileData* quad_id, vec2 Size) const;
-	std::vector<int> GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos, float Radius) const;
+	vec2 MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, const CMovingTileData* moving_tile, vec2 Size) const;
+	std::vector<const CMovingTileData*> GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos) const;
 	const CMovingTileData* CheckPointQuadRectangular(vec2 Pos, vec2 player_pos, bool border, const CMovingTileData* movingTile) const;
 	void MoveBoxQuad(vec2 old_pos, vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size) const;
 

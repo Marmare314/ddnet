@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "character.h"
+#include "game/collision.h"
 #include "laser.h"
 #include "projectile.h"
 
@@ -1406,27 +1407,40 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 	}
 }
 
-void CCharacter::HandleTiles(int Index)
+void CCharacter::HandleTiles(int Index, const CMovingTileData* pMovingTile)
 {
 	int MapIndex = Index;
-	//int PureMapIndex = Collision()->GetPureMapIndex(m_Pos);
-	m_TileIndex = Collision()->GetTileIndex(MapIndex);
-	m_TileFIndex = Collision()->GetFTileIndex(MapIndex);
-	m_MoveRestrictions = Collision()->GetMoveRestrictions(IsSwitchActiveCb, this, m_Pos, 18.0f, MapIndex);
-	if(Index < 0)
-	{
-		m_LastRefillJumps = false;
-		m_LastPenalty = false;
-		m_LastBonus = false;
-		return;
+	if(pMovingTile == nullptr) {
+		//int PureMapIndex = Collision()->GetPureMapIndex(m_Pos);
+		m_TileIndex = Collision()->GetTileIndex(MapIndex);
+		m_TileFIndex = Collision()->GetFTileIndex(MapIndex);
+		m_MoveRestrictions = Collision()->GetMoveRestrictions(IsSwitchActiveCb, this, m_Pos, 18.0f, MapIndex);
+		if(Index < 0)
+		{
+			m_LastRefillJumps = false;
+			m_LastPenalty = false;
+			m_LastBonus = false;
+			return;
+		}
+
+		GameServer()->m_pController->HandleCharacterTiles(this, Index);
+	} else {
+		m_TileIndex = pMovingTile->GetTileIndex();
+		m_TileFIndex = TILE_AIR;
+
+		// m_MoveRestrictions = Collision()->GetMoveRestrictions(IsSwitchActiveCb, this, m_Pos, 18.0f, MapIndex);
+		// GameServer()->m_pController->HandleCharacterTiles(this, Index);
+
+		if (m_TileIndex == TILE_DEATH && !m_Core.m_Super) {
+			Die(m_pPlayer->GetCID(), WEAPON_WORLD);
+		}
 	}
-	SetTimeCheckpoint(Collision()->IsTimeCheckpoint(MapIndex));
+
+	SetTimeCheckpoint(Collision()->IsTimeCheckpoint(MapIndex, pMovingTile));
 	SetTimeCheckpoint(Collision()->IsFTimeCheckpoint(MapIndex));
-	int TeleCheckpoint = Collision()->IsTeleCheckpoint(MapIndex);
+	int TeleCheckpoint = Collision()->IsTeleCheckpoint(MapIndex, pMovingTile);
 	if(TeleCheckpoint)
 		m_TeleCheckpoint = TeleCheckpoint;
-
-	GameServer()->m_pController->HandleCharacterTiles(this, Index);
 
 	// freeze
 	if(((m_TileIndex == TILE_FREEZE) || (m_TileFIndex == TILE_FREEZE)) && !m_Core.m_Super && !m_Core.m_DeepFrozen)
@@ -1819,7 +1833,7 @@ void CCharacter::HandleTiles(int Index)
 		m_LastBonus = false;
 	}
 
-	int z = Collision()->IsTeleport(MapIndex);
+	int z = Collision()->IsTeleport(MapIndex, pMovingTile);
 	if(!g_Config.m_SvOldTeleportHook && !g_Config.m_SvOldTeleportWeapons && z && !(*m_pTeleOuts)[z - 1].empty())
 	{
 		if(m_Core.m_Super)
@@ -1834,7 +1848,7 @@ void CCharacter::HandleTiles(int Index)
 			ResetPickups();
 		return;
 	}
-	int evilz = Collision()->IsEvilTeleport(MapIndex);
+	int evilz = Collision()->IsEvilTeleport(MapIndex, pMovingTile);
 	if(evilz && !(*m_pTeleOuts)[evilz - 1].empty())
 	{
 		if(m_Core.m_Super)
@@ -1857,7 +1871,7 @@ void CCharacter::HandleTiles(int Index)
 		}
 		return;
 	}
-	if(Collision()->IsCheckEvilTeleport(MapIndex))
+	if(Collision()->IsCheckEvilTeleport(MapIndex, pMovingTile))
 	{
 		if(m_Core.m_Super)
 			return;
@@ -1894,7 +1908,7 @@ void CCharacter::HandleTiles(int Index)
 		}
 		return;
 	}
-	if(Collision()->IsCheckTeleport(MapIndex))
+	if(Collision()->IsCheckTeleport(MapIndex, pMovingTile))
 	{
 		if(m_Core.m_Super)
 			return;
@@ -2102,21 +2116,38 @@ void CCharacter::DDRacePostCoreTick()
 		return;
 
 	// handle Anti-Skip tiles
-	std::list<int> Indices = Collision()->GetMapIndices(m_PrevPos, m_Pos);
-	if(!Indices.empty())
+	float Distance = distance(m_PrevPos, m_Pos);
+	int Max = Distance / 32 + 1;
+
+	vec2 last_pos = m_PrevPos;
+	if(Distance > 0.00001f)
 	{
-		for(int &Index : Indices)
+		float Fraction = 1.0f / (float)(Max + 1);
+		for(int i = 0; i <= Max; i++)
 		{
-			HandleTiles(Index);
+			vec2 Pos = mix(m_PrevPos, m_Pos, Fraction * (float)i);
+			CurrentIndex = Collision()->GetMapIndex(Pos);
+			HandleTiles(CurrentIndex, nullptr);
+			if(!m_Alive)
+				return;
+			auto quads = Collision()->GetQuadCollisionsBetween(last_pos, Pos);
+			for (const auto* quad : quads) {
+				HandleTiles(-1, quad);
+				if(!m_Alive)
+					return;
+			}
+			last_pos = Pos;
+		}
+	} else {
+		HandleTiles(CurrentIndex, nullptr);
+		if(!m_Alive)
+			return;
+		const auto* quad = Collision()->GetQuadCollisionAt(m_Pos, m_Pos);
+		if (quad) {
+			HandleTiles(-1, quad);
 			if(!m_Alive)
 				return;
 		}
-	}
-	else
-	{
-		HandleTiles(CurrentIndex);
-		if(!m_Alive)
-			return;
 	}
 
 	// teleport gun

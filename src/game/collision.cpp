@@ -63,6 +63,19 @@ bool CMovingTileData::IsHookBlocker(vec2 Pos0, vec2 Pos1) const {
 	return false; // TODO Marmare: implement
 }
 
+int CMovingTileData::GetTeleportNumber(int type) const {
+	if (m_MovingTile.m_Skip == 1) {
+		if (m_MovingTile.m_Flags == type) {
+			return m_MovingTile.m_Index;
+		}
+	}
+	return 0;
+}
+
+bool CMovingTileData::IsTimeCheckpoint() const {
+	return false; // TODO Marmare: implement
+}
+
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
 {
 	if(Vel.x > 0 && (MoveRestriction & CANTMOVE_RIGHT))
@@ -110,7 +123,6 @@ vec2 normalize_ivec2(ivec2 v)
 	return vec2(v.x, v.y) / length(vec2(v.x, v.y));
 }
 
-// TODO: this is not nice
 float dot(vec2 a, vec2 b) {
 	return a.x * b.x + a.y * b.y;
 }
@@ -428,14 +440,8 @@ const CMovingTileData* CCollision::CheckPointQuadRectangular(vec2 Pos, vec2 play
 	if (movingTile != nullptr) {
 		if (movingTile->IsSolid()) {
 			// TODO Marmare: apply parallax
-			if (border) {
-				if (movingTile->m_CurrentPos[0].x <= Pos.x && Pos.x <= movingTile->m_CurrentPos[1].x && movingTile->m_CurrentPos[0].y <= Pos.y && Pos.y <= movingTile->m_CurrentPos[2].y) {
-					return movingTile;
-				}
-			} else {
-				if (f2fx(movingTile->m_CurrentPos[0].x) + 1 < f2fx(Pos.x) && f2fx(Pos.x) < f2fx(movingTile->m_CurrentPos[1].x) + 1 && f2fx(movingTile->m_CurrentPos[0].y) + 1 < f2fx(Pos.y) && f2fx(Pos.y) + 1 < f2fx(movingTile->m_CurrentPos[2].y)) {
-					return movingTile;
-				}
+			if (round_to_int(movingTile->m_CurrentPos[0].x) <= round_to_int(Pos.x) && round_to_int(Pos.x) <= round_to_int(movingTile->m_CurrentPos[1].x) && round_to_int(movingTile->m_CurrentPos[0].y) <= round_to_int(Pos.y) && round_to_int(Pos.y) <= round_to_int(movingTile->m_CurrentPos[2].y)) {
+				return movingTile;
 			}
 		}
 	} else {
@@ -689,7 +695,7 @@ std::tuple<int, const CMovingTileData*> CCollision::IntersectLineTeleHook(vec2 P
 		// TODO Marmare: implement moving tiles telehook
 		int Index = GetPureMapIndex(Pos);
 		if(g_Config.m_SvOldTeleportHook)
-			*pTeleNr = IsTeleport(Index);
+			*pTeleNr = IsTeleport(Index, nullptr);
 		else
 			*pTeleNr = IsTeleportHook(Index);
 		if(*pTeleNr)
@@ -755,7 +761,7 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 
 		int Index = GetPureMapIndex(Pos);
 		if(g_Config.m_SvOldTeleportWeapons)
-			*pTeleNr = IsTeleport(Index);
+			*pTeleNr = IsTeleport(Index, nullptr);
 		else
 			*pTeleNr = IsTeleportWeapon(Index);
 		if(*pTeleNr)
@@ -854,43 +860,46 @@ bool CCollision::TestBoxQuad(vec2 Pos, vec2 Size, bool border, const CMovingTile
 }
 
 void CCollision::MoveBoxOutQuad(vec2* pInoutPos, vec2 Size) const {
-	// for (const auto& movingTile: m_pMovingTiles) {
-	// 	if (movingTile.IsSolid()) {
-	// 		if (TestBoxQuad(*pInoutPos, Size)) {
-	// 			vec2 p;
-	// 			vec2 nearest_point_on_line;
-	// 			bool is_inside = CheckPointQuadRectangular(*pInoutPos, *pInoutPos);
+	for (const auto& movingTile: m_pMovingTiles) {
+		if (movingTile.IsSolid()) {
+			// TODO Marmare: die if the player is inside a tile
+			if (TestBoxQuad(*pInoutPos, Size, false, &movingTile)) {
+				float dx0 = pInoutPos->x - movingTile.m_CurrentPos.at(0).x;
+				float dx1 = movingTile.m_CurrentPos.at(1).x - pInoutPos->x;
+				float dy0 = pInoutPos->y - movingTile.m_CurrentPos.at(0).y;
+				float dy2 = movingTile.m_CurrentPos.at(2).y - pInoutPos->y;
+				if (std::min(dx0, dx1) < std::min(dy0, dy2)) {
+					if (dx0 < dx1) {
+						pInoutPos->x = floor(movingTile.m_CurrentPos.at(0).x - Size.x / 2) - 1;
+					} else {
+						pInoutPos->x = ceil(movingTile.m_CurrentPos.at(1).x + Size.x / 2) + 1;
+					}
 
-	// 			closest_point_on_line(movingTile.m_CurrentPos.at(0), movingTile.m_CurrentPos.at(1), *pInoutPos, p);
-	// 			float min_dist = distance(p, *pInoutPos);
-	// 			nearest_point_on_line = p;
+					if (TestBoxQuad(*pInoutPos, Size, false, &movingTile)) {
+						if (dy0 < dy2) {
+							pInoutPos->y = floor(movingTile.m_CurrentPos.at(0).y - Size.y / 2) - 1;
+						} else {
+							pInoutPos->y = ceil(movingTile.m_CurrentPos.at(2).y + Size.y / 2) + 1;
+						}
+					}
+				} else {
+					if (dy0 < dy2) {
+						pInoutPos->y = floor(movingTile.m_CurrentPos.at(0).y - Size.y / 2) - 1;
+					} else {
+						pInoutPos->y = ceil(movingTile.m_CurrentPos.at(2).y + Size.y / 2) + 1;
+					}
 
-	// 			closest_point_on_line(movingTile.m_CurrentPos.at(1), movingTile.m_CurrentPos.at(3), *pInoutPos, p);
-	// 			float dist = distance(p, *pInoutPos);
-	// 			if (dist < min_dist) {
-	// 				min_dist = dist;
-	// 				nearest_point_on_line = p;
-	// 			}
-
-	// 			closest_point_on_line(movingTile.m_CurrentPos.at(3), movingTile.m_CurrentPos.at(2), *pInoutPos, p);
-	// 			dist = distance(p, *pInoutPos);
-	// 			if (dist < min_dist) {
-	// 				min_dist = dist;
-	// 				nearest_point_on_line = p;
-	// 			}
-
-	// 			closest_point_on_line(movingTile.m_CurrentPos.at(2), movingTile.m_CurrentPos.at(0), *pInoutPos, p);
-	// 			dist = distance(p, *pInoutPos);
-	// 			if (dist < min_dist) {
-	// 				min_dist = dist;
-	// 				nearest_point_on_line = p;
-	// 			}
-
-	// 			vec2 pos_offset = normalize(*pInoutPos - nearest_point_on_line) * Size.x / 2 * (is_inside ? -1 : 1);
-	// 			*pInoutPos = nearest_point_on_line + pos_offset;
-	// 		}
-	// 	}
-	// }
+					if (TestBoxQuad(*pInoutPos, Size, false, &movingTile)) {
+						if (dx0 < dx1) {
+							pInoutPos->x = floor(movingTile.m_CurrentPos.at(0).x - Size.x / 2) - 1;
+						} else {
+							pInoutPos->x = ceil(movingTile.m_CurrentPos.at(1).x + Size.x / 2) + 1;
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 vec2 CCollision::MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, const CMovingTileData* moving_tile, vec2 Size) const {
@@ -907,24 +916,44 @@ vec2 CCollision::MoveGroundedQuad(vec2 player_pos, int initial_tick, int tick, c
 	return vec2(pos_offset.x, pos_offset.y);
 }
 
-std::vector<int> CCollision::GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos, float Radius) const {
-	// float distance = length(final_pos - initial_pos);
-	// vec2 direction = normalize(final_pos - initial_pos);
-	// std::vector<int> collisions;
-	// int steps = distance / Radius + 1;
-	// for (int i = 0; i < steps; i++) {
-	// 	vec2 pos = initial_pos + direction * Radius * i;
-	// 	for (const auto& movingTile: m_pMovingTiles) {
-	// 		auto [triangle_1, triangle_2] = movingTile.Triangulate();
-	// 		triangle_1 = apply_para_to_triangle(triangle_1, pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
-	// 		triangle_2 = apply_para_to_triangle(triangle_2, pos, movingTile.m_ParallaxX, movingTile.m_ParallaxY, movingTile.m_OffsetX, movingTile.m_OffsetY);
+float cross(vec2 a, vec2 b) {
+	return a.x * b.y - a.y * b.x;
+}
 
-	// 		if (circle_intersects_triangle(triangle_1, pos, Radius) || circle_intersects_triangle(triangle_2, pos, Radius)) {
-	// 			collisions.push_back(movingTile.m_TileType);
-	// 		}
-	// 	}
-	// }
-	return {};
+bool line_intersects_line(vec2 p0, vec2 p1, vec2 q0, vec2 q1) {
+	vec2 r = p1 - p0;
+	vec2 s = q1 - q0;
+	float rxs = cross(r, s);
+	if (rxs == 0) {
+		return false;
+	}
+	float t = cross(q0 - p0, s) / rxs;
+	float u = cross(q0 - p0, r) / rxs;
+	return 0 <= t && t <= 1 && 0 <= u && u <= 1;
+}
+
+bool line_intersects_triangle(vec2 p0, vec2 p1, std::array<vec2, 3> corners) {
+	if (point_in_triangle(corners, p0) || point_in_triangle(corners, p1)) {
+		return true;
+	}
+	for (int i = 0; i < 3; i++) {
+		if (line_intersects_line(p0, p1, corners[i], corners[(i + 1) % 3])) {
+			return true;
+		}
+	}
+	return false;
+}
+
+std::vector<const CMovingTileData*> CCollision::GetQuadCollisionsBetween(vec2 initial_pos, vec2 final_pos) const {
+	std::vector<const CMovingTileData*> collisions;
+	for (const auto& movingTile: m_pMovingTiles) {
+		// TODO: consider parallax
+		auto [triangle_1, triangle_2] = movingTile.Triangulate();
+		if (line_intersects_triangle(initial_pos, final_pos, triangle_1) || line_intersects_triangle(initial_pos, final_pos, triangle_2)) {
+			collisions.push_back(&movingTile);
+		}
+	}
+	return collisions;
 }
 
 bool CCollision::TestBox(vec2 Pos, vec2 Size) const
@@ -941,77 +970,6 @@ bool CCollision::TestBox(vec2 Pos, vec2 Size) const
 	return false;
 }
 
-// bool line_intersects_line(vec2 p0, vec2 p1, vec2 q0, vec2 q1, vec2* intersection) {
-//     float s1_x = p1.x - p0.x;
-// 	float s1_y = p1.y - p0.y;
-//     float s2_x = q1.x - q0.x;
-// 	float s2_y = q1.y - q0.y;
-
-//     float s = (-s1_y * (p0.x - q0.x) + s1_x * (p0.y - q0.y)) / (-s2_x * s1_y + s1_x * s2_y);
-//     float t = ( s2_x * (p0.y - q0.y) - s2_y * (p0.x - q0.x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-//     if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
-//     {
-//         // Collision detected
-//         if (intersection != nullptr) {
-//             intersection->x = p0.x + (t * s1_x);
-//             intersection->y = p0.y + (t * s1_y);
-// 		}
-//         return true;
-//     }
-
-//     return false; // No collision
-
-// }
-
-// void CCollision::MoveBoxQuad(vec2 old_pos, vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size) const {
-// 	for (const auto& movingTile: m_pMovingTiles) {
-// 		if (movingTile.IsSolid()) {
-// 			if (TestBoxQuad(*pInoutPos, Size, false, &movingTile)) {
-// 				dbg_msg("collision", "moving tile");
-// 				vec2 NewPos = *pInoutPos;
-// 				int Hits = 0;
-// 				if (pInoutVel->y != 0 && TestBoxQuad(vec2(old_pos.x, pInoutPos->y), Size, true, &movingTile)) {
-// 					if (pInoutVel->y > 0) {
-// 						dbg_msg("collision", "moving down");
-// 						// NewPos.y = old_pos.y;
-// 						NewPos.y = movingTile.m_CurrentPos.at(0).y - Size.y / 2;
-// 					} else {
-// 						dbg_msg("collision", "moving up");
-// 						// NewPos.y
-// 						NewPos.y = movingTile.m_CurrentPos.at(2).y + Size.y / 2;
-// 					}
-// 					// NewPos.y = old_pos.y;
-// 					// *pInoutPos = NewPos;
-// 					pInoutVel->y = 0;
-// 					Hits += 1;
-// 				}
-// 				if (pInoutVel->x != 0 && TestBoxQuad(vec2(pInoutPos->x, old_pos.y), Size, true, &movingTile)) {
-// 					if (pInoutVel->x > 0) {
-// 						dbg_msg("collision", "moving right");
-// 						NewPos.x = movingTile.m_CurrentPos.at(0).x - Size.x / 2;
-// 					} else {
-// 						dbg_msg("collision", "moving left");
-// 						NewPos.x = movingTile.m_CurrentPos.at(1).x + Size.x / 2;
-// 					}
-// 					// NewPos.x = old_pos.x;
-// 					pInoutVel->x = 0;
-// 					Hits += 1;
-// 				}
-
-// 				if (Hits == 0) {
-// 					dbg_msg("collision", "moving diagonal");
-// 				}
-
-// 				dbg_msg("collision", "moving from (%f, %f) to (%f, %f)", pInoutPos->x, pInoutPos->y, NewPos.x, NewPos.y);
-// 				dbg_msg("collision", "velocity (%f, %f)", pInoutVel->x, pInoutVel->y);
-// 				*pInoutPos = NewPos;
-// 				dbg_msg("collision", "moving to (%f, %f)", pInoutPos->x, pInoutPos->y);
-// 			}
-// 		}
-// 	}
-// }
-
 void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity) const
 {
 	// do the move
@@ -1019,7 +977,7 @@ void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elas
 	vec2 Vel = *pInoutVel;
 
 	float Distance = length(Vel);
-	int Max = (int)Distance * 32;
+	int Max = (int)Distance + 1; // TODO Marmare: is the * 32 needed?
 
 	if(Distance > 0.00001f)
 	{
@@ -1178,68 +1136,79 @@ int CCollision::IsFNoLaser(int x, int y) const
 	return (CCollision::GetFTile(x, y) == TILE_NOLASER);
 }
 
-int CCollision::IsTeleport(int Index) const
+int CCollision::IsTeleport(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0 || !m_pTele)
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return 0;
+		if(!m_pTele)
+			return 0;
+		if(m_pTele[Index].m_Type == TILE_TELEIN)
+			return m_pTele[Index].m_Number;
 		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELEIN)
-		return m_pTele[Index].m_Number;
-
-	return 0;
+	} else {
+		return pMovingTile->GetTeleportNumber(TILE_TELEIN);
+	}
 }
 
-int CCollision::IsEvilTeleport(int Index) const
+int CCollision::IsEvilTeleport(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0)
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return 0;
+		if(!m_pTele)
+			return 0;
+		if(m_pTele[Index].m_Type == TILE_TELEINEVIL)
+			return m_pTele[Index].m_Number;
 		return 0;
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELEINEVIL)
-		return m_pTele[Index].m_Number;
-
-	return 0;
+	} else {
+		return pMovingTile->GetTeleportNumber(TILE_TELEINEVIL);
+	}
 }
 
-int CCollision::IsCheckTeleport(int Index) const
+int CCollision::IsCheckTeleport(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0)
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return 0;
+		if(!m_pTele)
+			return 0;
+		if(m_pTele[Index].m_Type == TILE_TELECHECKIN)
+			return m_pTele[Index].m_Number;
 		return 0;
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECKIN)
-		return m_pTele[Index].m_Number;
-
-	return 0;
+	} else {
+		return pMovingTile->GetTeleportNumber(TILE_TELECHECKIN);
+	}
 }
 
-int CCollision::IsCheckEvilTeleport(int Index) const
+int CCollision::IsCheckEvilTeleport(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0)
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return 0;
+		if(!m_pTele)
+			return 0;
+		if(m_pTele[Index].m_Type == TILE_TELECHECKINEVIL)
+			return m_pTele[Index].m_Number;
 		return 0;
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECKINEVIL)
-		return m_pTele[Index].m_Number;
-
-	return 0;
+	} else {
+		return pMovingTile->GetTeleportNumber(TILE_TELECHECKINEVIL);
+	}
 }
 
-int CCollision::IsTeleCheckpoint(int Index) const
+int CCollision::IsTeleCheckpoint(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0)
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return 0;
+		if(!m_pTele)
+			return 0;
+		if(m_pTele[Index].m_Type == TILE_TELECHECK)
+			return m_pTele[Index].m_Number;
 		return 0;
-
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECK)
-		return m_pTele[Index].m_Number;
-
-	return 0;
+	} else {
+		return pMovingTile->GetTeleportNumber(TILE_TELECHECK);
+	}
 }
 
 int CCollision::IsTeleportWeapon(int Index) const
@@ -1813,15 +1782,19 @@ int CCollision::IntersectAir(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pO
 	return 0;
 }
 
-int CCollision::IsTimeCheckpoint(int Index) const
+int CCollision::IsTimeCheckpoint(int Index, const CMovingTileData* pMovingTile) const
 {
-	if(Index < 0)
-		return -1;
+	if (pMovingTile == nullptr) {
+		if(Index < 0)
+			return -1;
 
-	int z = m_pTiles[Index].m_Index;
-	if(z >= TILE_TIME_CHECKPOINT_FIRST && z <= TILE_TIME_CHECKPOINT_LAST)
-		return z - TILE_TIME_CHECKPOINT_FIRST;
-	return -1;
+		int z = m_pTiles[Index].m_Index;
+		if(z >= TILE_TIME_CHECKPOINT_FIRST && z <= TILE_TIME_CHECKPOINT_LAST)
+			return z - TILE_TIME_CHECKPOINT_FIRST;
+		return -1;
+	} else {
+		return pMovingTile->IsTimeCheckpoint();
+	}
 }
 
 int CCollision::IsFTimeCheckpoint(int Index) const

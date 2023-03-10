@@ -3,6 +3,7 @@
 #ifndef GAME_SERVER_ENTITIES_CHARACTER_H
 #define GAME_SERVER_ENTITIES_CHARACTER_H
 
+#include "game/collision.h"
 #include <game/server/entity.h>
 #include <game/server/save.h>
 
@@ -147,7 +148,7 @@ private:
 	void SnapCharacter(int SnappingClient, int ID);
 	static bool IsSwitchActiveCb(int Number, void *pUser);
 	void SetTimeCheckpoint(int TimeCheckpoint);
-	void HandleTiles(int Index);
+	void HandleTiles(int Index, const CMovingTileData* pMovingTile);
 	float m_Time;
 	int m_LastBroadcast;
 	void DDRaceInit();

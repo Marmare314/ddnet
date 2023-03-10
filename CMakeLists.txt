@@ -2497,8 +2497,6 @@ if(SERVER)
     entities/laser.h
     entities/light.cpp
     entities/light.h
-    entities/moving_tiles.cpp
-    entities/moving_tiles.h
     entities/pickup.cpp
     entities/pickup.h
     entities/plasma.cpp

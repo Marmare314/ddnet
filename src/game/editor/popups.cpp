@@ -777,6 +777,7 @@ int CEditor::PopupQuad(CEditor *pEditor, CUIRect View, void *pContext)
 	View.HSplitTop(10.0f, &Button, &ViewMovingTiles);
 	if(pLayer && pLayer->m_Flags & LAYERFLAG_MOVINGTILES)
 	{
+		// dbg_msg("movingtiles", "current moving tile: %d, %d, %d, %d", pCurrentMovingTile->m_Index, pCurrentMovingTile->m_Flags, pCurrentMovingTile->m_Reserved, pCurrentMovingTile->m_Skip);
 		ViewMovingTiles.HSplitTop(6.0f, &Button, &ViewMovingTiles);
 		ViewMovingTiles.HSplitTop(12.0, &Button, &ViewMovingTiles);
 		CUIRect Inc, Dec;

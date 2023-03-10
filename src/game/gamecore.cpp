@@ -314,7 +314,9 @@ void CCharacterCore::Tick(int pTick, bool UseInput, bool DoDeferredTick)
 		if(Hit)
 		{
 			if(Hit == TILE_NOHOOK) {
-				NewPos = Collision()->ApplyParaToHook(m_InitialMovingTileHookPos, pTick, m_HookedMovingTile, m_Pos);
+				if (m_HookedMovingTile != nullptr) {
+					NewPos = Collision()->ApplyParaToHook(m_InitialMovingTileHookPos, pTick, m_HookedMovingTile, m_Pos);
+				}
 				GoingToRetract = true;
 			}
 			else if(Hit == TILE_TELEINHOOK)
