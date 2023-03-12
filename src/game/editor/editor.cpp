@@ -2781,7 +2781,7 @@ void CEditor::DoMapEditor(CUIRect View)
 			}
 
 			// release mouse
-			if(!UI()->MouseButton(0))
+			if((s_Operation == OP_PAN_WORLD || s_Operation == OP_PAN_EDITOR) && !UI()->MouseButton(2))
 			{
 				s_Operation = OP_NONE;
 				UI()->SetActiveItem(nullptr);
