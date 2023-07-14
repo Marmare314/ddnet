@@ -13,6 +13,7 @@
 #include <game/collision.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
+#include <game/gamecore.h>
 
 #include <engine/shared/config.h>
 
@@ -245,6 +246,8 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 	int StartEnvelopes, NumEnvelopes;
 	pMap->GetType(MAPITEMTYPE_ENVELOPE, &StartEnvelopes, &NumEnvelopes);
 
+	// TODO: check for kog_qquads 1
+
 	int last_envpoint_used = 0;
 	for (int index_group = 0; index_group < NumGroups; index_group++) {
 		CMapItemGroup* group = static_cast<CMapItemGroup*>(pMap->GetItem(StartGroups + index_group, 0, 0));
@@ -254,19 +257,71 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 
 		for (int index_layer = 0; index_layer < group->m_NumLayers; index_layer++) {
 			CMapItemLayer* layer = pLayers->GetLayer(group->m_StartLayer + index_layer);
-			if (layer->m_Type == LAYERTYPE_QUADS && layer->m_Flags & LAYERFLAG_MOVINGTILES) {
+			if (layer->m_Type == LAYERTYPE_QUADS) {
 				
 				// TODO: assert that parazoom is off
 
 				auto* layer_quads = reinterpret_cast<CMapItemLayerQuads*>(layer);
 				CQuad* quad_array = nullptr;
-				CMovingTile* moving_tile_info = nullptr;
+				// CMovingTile* moving_tile_info = nullptr;
 				if (layer_quads->m_Data >= 0) {
 					quad_array = static_cast<CQuad*>(pMap->GetDataSwapped(layer_quads->m_Data));
-					moving_tile_info = static_cast<CMovingTile*>(pMap->GetDataSwapped(layer_quads->m_Data + 1));
+					// moving_tile_info = static_cast<CMovingTile*>(pMap->GetDataSwapped(layer_quads->m_Data + 1));
 				} else {
 					continue;
 				}
+
+				CMovingTile info;
+				char Name[128];
+				IntsToStr(layer_quads->m_aName, 3, Name);
+				if(str_comp(Name, "QFr") == 0) {
+					info = {
+						TILE_FREEZE,
+						0,
+						0,
+						0
+					};
+				}
+				else if(str_comp(Name, "QUnFr") == 0) {
+					info = {
+						TILE_UNFREEZE,
+						0,
+						0,
+						0
+					};
+				}
+				else if(str_comp(Name, "QHook") == 0) {
+					info = {
+						TILE_SOLID,
+						0,
+						0,
+						0
+					};
+				}
+				else if(str_comp(Name, "QUnHook") == 0) {
+					info = {
+						TILE_NOHOOK,
+						0,
+						0,
+						0
+					};
+				}
+				else if(str_comp(Name, "QDeath") == 0) {
+					info = {
+						TILE_DEATH,
+						0,
+						0,
+						0
+					};
+				}
+				// else if(str_comp(Name, "QCfrm") == 0) {
+				// 	info = {
+				// 		0,
+				// 		TILE_TELECHECKIN,
+				// 		1,
+				// 		0
+				// 	};
+				// }
 
 				for (int index_quad = 0; index_quad < layer_quads->m_NumQuads; index_quad++) {
 					// TODO: assert that envelope is synchronized
@@ -289,7 +344,7 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 						group->m_ParallaxY,
 						group->m_OffsetX,
 						group->m_OffsetY,
-						moving_tile_info[index_quad]
+						info
 					});
 
 					m_pMovingTiles.back().m_TriangulationPattern = calculate_triangulation(m_pMovingTiles.back().m_Pos);
