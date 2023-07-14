@@ -314,14 +314,18 @@ void CCollision::Init(class IMap *pMap, class CLayers *pLayers)
 						0
 					};
 				}
-				// else if(str_comp(Name, "QCfrm") == 0) {
-				// 	info = {
-				// 		0,
-				// 		TILE_TELECHECKIN,
-				// 		1,
-				// 		0
-				// 	};
-				// }
+				else if(str_comp(Name, "QCfrm") == 0) {
+					info = {
+						1,
+						TILE_TELECHECKIN,
+						1,
+						0
+					};
+				}
+				else
+				{
+					continue;
+				}
 
 				for (int index_quad = 0; index_quad < layer_quads->m_NumQuads; index_quad++) {
 					// TODO: assert that envelope is synchronized
