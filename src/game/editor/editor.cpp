@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include "game/mapitems.h"
 #include <algorithm>
 
 #include <base/color.h>
@@ -1540,11 +1541,6 @@ void CEditor::DoQuad(CQuad *pQuad, int Index)
 	float CenterX = fx2f(pQuad->m_aPoints[4].x);
 	float CenterY = fx2f(pQuad->m_aPoints[4].y);
 
-	float dx = (CenterX - wx) / m_MouseWScale;
-	float dy = (CenterY - wy) / m_MouseWScale;
-	if(dx * dx + dy * dy < 50)
-		UI()->SetHotItem(pID);
-
 	const bool IgnoreGrid = Input()->AltIsPressed();
 
 	// draw selection background
@@ -1830,11 +1826,6 @@ void CEditor::DoQuadPoint(CQuad *pQuad, int QuadIndex, int V)
 
 	float px = fx2f(pQuad->m_aPoints[V].x);
 	float py = fx2f(pQuad->m_aPoints[V].y);
-
-	float dx = (px - wx) / m_MouseWScale;
-	float dy = (py - wy) / m_MouseWScale;
-	if(dx * dx + dy * dy < 50)
-		UI()->SetHotItem(pID);
 
 	// draw selection background
 	if(IsQuadPointSelected(QuadIndex, V))
@@ -2380,23 +2371,14 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, int QIndex, int PIndex)
 	float wy = UI()->MouseWorldY();
 	CEnvelope *pEnvelope = m_Map.m_vpEnvelopes[pQuad->m_PosEnv];
 	void *pID = &pEnvelope->m_vPoints[PIndex];
-	static int s_CurQIndex = -1;
 
 	// get pivot
 	float CenterX = fx2f(pQuad->m_aPoints[4].x) + fx2f(pEnvelope->m_vPoints[PIndex].m_aValues[0]);
 	float CenterY = fx2f(pQuad->m_aPoints[4].y) + fx2f(pEnvelope->m_vPoints[PIndex].m_aValues[1]);
 
-	float dx = (CenterX - wx) / m_MouseWScale;
-	float dy = (CenterY - wy) / m_MouseWScale;
-	if(dx * dx + dy * dy < 50.0f && UI()->CheckActiveItem(nullptr))
-	{
-		UI()->SetHotItem(pID);
-		s_CurQIndex = QIndex;
-	}
-
 	const bool IgnoreGrid = Input()->AltIsPressed();
 
-	if(UI()->CheckActiveItem(pID) && s_CurQIndex == QIndex)
+	if(UI()->CheckActiveItem(pID) && m_CurrentQuadIndex == QIndex)
 	{
 		if(s_Operation == OP_MOVE)
 		{
@@ -2429,7 +2411,7 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, int QIndex, int PIndex)
 
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
-	else if(UI()->HotItem() == pID && s_CurQIndex == QIndex)
+	else if(UI()->HotItem() == pID && m_CurrentQuadIndex == QIndex)
 	{
 		ms_pUiGotContext = pID;
 
@@ -2963,6 +2945,8 @@ void CEditor::DoMapEditor(CUIRect View)
 							DoQuadKnife(m_vSelectedQuads[m_SelectedQuadIndex]);
 						else
 						{
+							SetHotQuadPoint(pLayer);
+
 							Graphics()->TextureClear();
 							Graphics()->QuadsBegin();
 							for(size_t i = 0; i < pLayer->m_vQuads.size(); i++)
@@ -3270,6 +3254,51 @@ void CEditor::DoMapEditor(CUIRect View)
 	}
 
 	UI()->MapScreen();
+}
+
+void CEditor::SetHotQuadPoint(CLayerQuads *pLayer)
+{
+	float wx = UI()->MouseWorldX();
+	float wy = UI()->MouseWorldY();
+
+	float MinDist = 500.0f;
+	void *pMinPoint = nullptr;
+
+	auto UpdateMinimum = [&](float px, float py, void *pID) {
+		float dx = (px - wx) / m_MouseWScale;
+		float dy = (py - wy) / m_MouseWScale;
+
+		float CurrDist = dx * dx + dy * dy;
+		if(CurrDist < MinDist)
+		{
+			MinDist = CurrDist;
+			pMinPoint = pID;
+			return true;
+		}
+		return false;
+	};
+
+	for(size_t i = 0; i < pLayer->m_vQuads.size(); i++)
+	{
+		CQuad &Quad = pLayer->m_vQuads.at(i);
+
+		if(m_ShowTileInfo != SHOW_TILE_OFF && m_ShowEnvelopePreview != SHOWENV_NONE && Quad.m_PosEnv >= 0)
+		{
+			for(auto& EnvPoint : m_Map.m_vpEnvelopes[Quad.m_PosEnv]->m_vPoints)
+			{
+				float px = fx2f(Quad.m_aPoints[4].x) + fx2f(EnvPoint.m_aValues[0]);
+				float py = fx2f(Quad.m_aPoints[4].y) + fx2f(EnvPoint.m_aValues[1]);
+				if(UpdateMinimum(px, py, &EnvPoint))
+					m_CurrentQuadIndex = i;
+			}
+		}
+
+		for(auto &Point : Quad.m_aPoints)
+			UpdateMinimum(fx2f(Point.x), fx2f(Point.y), &Point);
+	}
+
+	if(pMinPoint != nullptr)
+		UI()->SetHotItem(pMinPoint);
 }
 
 int CEditor::DoProperties(CUIRect *pToolBox, CProperty *pProps, int *pIDs, int *pNewVal, ColorRGBA Color)
@@ -5719,6 +5748,57 @@ void CEditor::RemoveTimeOffsetEnvelope(CEnvelope *pEnvelope)
 	m_OffsetEnvelopeX += fxt2f(TimeOffset) / m_ZoomEnvelopeX.GetZoom();
 };
 
+void CEditor::SetHotEnvelopePoint(const CUIRect &View, CEnvelope *pEnvelope)
+{
+	if(!UI()->MouseInside(&View))
+		return;
+
+	float mx = UI()->MouseX();
+	float my = UI()->MouseY();
+
+	float MinDist = 200.0f;
+	int *pMinPoint = nullptr;
+
+	auto UpdateMinimum = [&](float px, float py, int *pID) {
+		float dx = px - mx;
+		float dy = py - my;
+
+		float CurrDist = dx * dx + dy * dy;
+		if(CurrDist < MinDist)
+		{
+			MinDist = CurrDist;
+			pMinPoint = pID;
+		}
+	};
+
+	for(size_t i = 0; i < pEnvelope->m_vPoints.size(); i++)
+	{
+		for(int c = 0; c < pEnvelope->GetChannels(); c++)
+		{
+			if(i > 0 && pEnvelope->m_vPoints[i - 1].m_Curvetype == CURVETYPE_BEZIER)
+			{
+				float px = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c]));
+				float py = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c]));
+				UpdateMinimum(px, py, &pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c]);
+			}
+
+			if(pEnvelope->m_vPoints[i].m_Curvetype == CURVETYPE_BEZIER)
+			{
+				float px = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]));
+				float py = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]));
+				UpdateMinimum(px, py, &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]);
+			}
+
+			float px = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time));
+			float py = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c]));
+			UpdateMinimum(px, py, &pEnvelope->m_vPoints[i].m_aValues[c]);
+		}
+	}
+
+	if(pMinPoint != nullptr)
+		UI()->SetHotItem(pMinPoint);
+}
+
 void CEditor::RenderEnvelopeEditor(CUIRect View)
 {
 	RenderExtraEditorDragBar(View, &m_EnvelopeEditorSplit);
@@ -6200,6 +6280,8 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		}
 
 		{
+			SetHotEnvelopePoint(View, pEnvelope);
+
 			UI()->ClipEnable(&View);
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -6221,9 +6303,6 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 						Final.h = 4.0f;
 
 						const void *pID = &pEnvelope->m_vPoints[i].m_aValues[c];
-
-						if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
-							UI()->SetHotItem(pID);
 
 						float ColorMod = 1.0f;
 
@@ -6358,8 +6437,6 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							const void *pID = &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c];
 
 							float ColorMod = 1.0f;
-							if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
-								UI()->SetHotItem(pID);
 
 							if(UI()->CheckActiveItem(pID))
 							{
@@ -6454,8 +6531,6 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							const void *pID = &pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c];
 
 							float ColorMod = 1.0f;
-							if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
-								UI()->SetHotItem(pID);
 
 							if(UI()->CheckActiveItem(pID))
 							{

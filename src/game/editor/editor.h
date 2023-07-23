@@ -948,6 +948,7 @@ public:
 		m_ShowEnvelopePreview = SHOWENV_NONE;
 		m_SelectedQuadEnvelope = -1;
 		m_SelectedEnvelopePoint = -1;
+		m_CurrentQuadIndex = -1;
 
 		m_QuadKnifeActive = false;
 		m_QuadKnifeCount = 0;
@@ -1267,6 +1268,7 @@ public:
 	int m_SelectedEnvelope;
 	int m_SelectedEnvelopePoint;
 	int m_SelectedQuadEnvelope;
+	int m_CurrentQuadIndex;
 	int m_SelectedImage;
 	int m_SelectedSound;
 	int m_SelectedSource;
@@ -1378,6 +1380,7 @@ public:
 	void DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CTextureHandle Texture = IGraphics::CTextureHandle());
 	void DoQuadEnvPoint(const CQuad *pQuad, int QIndex, int pIndex);
 	void DoQuadPoint(CQuad *pQuad, int QuadIndex, int v);
+	void SetHotQuadPoint(CLayerQuads *pLayer);
 
 	float TriangleArea(vec2 A, vec2 B, vec2 C);
 	bool IsInTriangle(vec2 Point, vec2 A, vec2 B, vec2 C);
@@ -1413,6 +1416,7 @@ public:
 	void RenderEnvelopeEditor(CUIRect View);
 	void RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEditorLast);
 	void RenderExtraEditorDragBar(CUIRect View, float *pSplit);
+	void SetHotEnvelopePoint(const CUIRect& View, CEnvelope *pEnvelope);
 
 	void RenderMenubar(CUIRect Menubar);
 	void RenderFileDialog();
