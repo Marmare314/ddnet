@@ -1082,7 +1082,7 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		static int s_ZoomOutButton = 0;
 		if(DoButton_FontIcon(&s_ZoomOutButton, "-", 0, &Button, 0, "[NumPad-] Zoom out", IGraphics::CORNER_L))
 		{
-			ChangeZoom(50.0f);
+			m_ZoomMapView.ChangeZoom(50.0f);
 		}
 
 		TB_Top.VSplitLeft(25.0f, &Button, &TB_Top);
@@ -1091,14 +1091,14 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		{
 			m_EditorOffsetX = 0;
 			m_EditorOffsetY = 0;
-			SetZoom(100.0f);
+			m_ZoomMapView.SetZoom(100.0f);
 		}
 
 		TB_Top.VSplitLeft(20.0f, &Button, &TB_Top);
 		static int s_ZoomInButton = 0;
 		if(DoButton_FontIcon(&s_ZoomInButton, "+", 0, &Button, 0, "[NumPad+] Zoom in", IGraphics::CORNER_R))
 		{
-			ChangeZoom(-50.0f);
+			m_ZoomMapView.ChangeZoom(-50.0f);
 		}
 
 		TB_Top.VSplitLeft(5.0f, nullptr, &TB_Top);
@@ -2251,7 +2251,7 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 				apEnvelope[i] = m_Map.m_vpEnvelopes[vQuads[i].m_PosEnv];
 	}
 
-	//Draw Lines
+	// Draw Lines
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
 	Graphics()->SetColor(80.0f / 255, 150.0f / 255, 230.f / 255, 0.5f);
@@ -2260,7 +2260,7 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 		if(!apEnvelope[j])
 			continue;
 
-		//QuadParams
+		// QuadParams
 		const CPoint *pPivotPoint = &vQuads[j].m_aPoints[4];
 		for(size_t i = 0; i < apEnvelope[j]->m_vPoints.size() - 1; i++)
 		{
@@ -2286,7 +2286,7 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	Graphics()->LinesEnd();
 
-	//Draw Quads
+	// Draw Quads
 	Graphics()->TextureSet(Texture);
 	Graphics()->QuadsBegin();
 
@@ -2295,17 +2295,17 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 		if(!apEnvelope[j])
 			continue;
 
-		//QuadParams
+		// QuadParams
 		const CPoint *pPoints = vQuads[j].m_aPoints;
 
 		for(size_t i = 0; i < apEnvelope[j]->m_vPoints.size(); i++)
 		{
-			//Calc Env Position
+			// Calc Env Position
 			float OffsetX = fx2f(apEnvelope[j]->m_vPoints[i].m_aValues[0]);
 			float OffsetY = fx2f(apEnvelope[j]->m_vPoints[i].m_aValues[1]);
 			float Rot = fx2f(apEnvelope[j]->m_vPoints[i].m_aValues[2]) / 360.0f * pi * 2;
 
-			//Set Colours
+			// Set Colours
 			float Alpha = (m_SelectedQuadEnvelope == vQuads[j].m_PosEnv && m_SelectedEnvelopePoint == (int)i) ? 0.65f : 0.35f;
 			IGraphics::CColorVertex aArray[4] = {
 				IGraphics::CColorVertex(0, vQuads[j].m_aColors[0].r, vQuads[j].m_aColors[0].g, vQuads[j].m_aColors[0].b, Alpha),
@@ -2314,7 +2314,7 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 				IGraphics::CColorVertex(3, vQuads[j].m_aColors[3].r, vQuads[j].m_aColors[3].g, vQuads[j].m_aColors[3].b, Alpha)};
 			Graphics()->SetColorVertex(aArray, 4);
 
-			//Rotation
+			// Rotation
 			if(Rot != 0)
 			{
 				static CPoint aRotated[4];
@@ -2330,14 +2330,14 @@ void CEditor::DoQuadEnvelopes(const std::vector<CQuad> &vQuads, IGraphics::CText
 				Rotate(&vQuads[j].m_aPoints[4], &aRotated[3], Rot);
 			}
 
-			//Set Texture Coords
+			// Set Texture Coords
 			Graphics()->QuadsSetSubsetFree(
 				fx2f(vQuads[j].m_aTexcoords[0].x), fx2f(vQuads[j].m_aTexcoords[0].y),
 				fx2f(vQuads[j].m_aTexcoords[1].x), fx2f(vQuads[j].m_aTexcoords[1].y),
 				fx2f(vQuads[j].m_aTexcoords[2].x), fx2f(vQuads[j].m_aTexcoords[2].y),
 				fx2f(vQuads[j].m_aTexcoords[3].x), fx2f(vQuads[j].m_aTexcoords[3].y));
 
-			//Set Quad Coords & Draw
+			// Set Quad Coords & Draw
 			IGraphics::CFreeformItem Freeform(
 				fx2f(pPoints[0].x) + OffsetX, fx2f(pPoints[0].y) + OffsetY,
 				fx2f(pPoints[1].x) + OffsetX, fx2f(pPoints[1].y) + OffsetY,
@@ -2518,7 +2518,7 @@ void CEditor::DoMapEditor(CUIRect View)
 		}
 
 		CLayerTiles *pT = static_cast<CLayerTiles *>(GetSelectedLayerType(0, LAYERTYPE_TILES));
-		if(m_ShowTileInfo != SHOW_TILE_OFF && pT && pT->m_Visible && m_Zoom <= 300.0f)
+		if(m_ShowTileInfo != SHOW_TILE_OFF && pT && pT->m_Visible && m_ZoomMapView.GetZoom() <= 300.0f)
 		{
 			GetSelectedGroup()->MapScreen();
 			pT->ShowInfo();
@@ -3147,7 +3147,7 @@ void CEditor::DoMapEditor(CUIRect View)
 
 		// possible screen sizes (white border)
 		float aLastPoints[4];
-		float Start = 1.0f; //9.0f/16.0f;
+		float Start = 1.0f; // 9.0f/16.0f;
 		float End = 16.0f / 9.0f;
 		const int NumSteps = 20;
 		for(int i = 0; i <= NumSteps; i++)
@@ -5597,6 +5597,128 @@ void CEditor::RemoveUnusedEnvelopes()
 	}
 }
 
+void CEditor::ZoomAdaptOffsetX(float ZoomFactor, const CUIRect &View)
+{
+	if(g_Config.m_EdZoomTarget)
+	{
+		float PosX = (UI()->MouseX() - View.x) / View.w;
+		m_OffsetEnvelopeX += (m_OffsetEnvelopeX - PosX) * (1.0f - ZoomFactor);
+	}
+	else
+		m_OffsetEnvelopeX += (m_OffsetEnvelopeX - 0.5f) * (1.0f - ZoomFactor);
+}
+
+void CEditor::UpdateZoomEnvelopeX(const CUIRect &View)
+{
+	float OldZoom = m_ZoomEnvelopeX.GetZoom();
+	if(m_ZoomEnvelopeX.UpdateZoom())
+		ZoomAdaptOffsetX(m_ZoomEnvelopeX.GetZoom() / OldZoom, View);
+}
+
+void CEditor::ZoomAdaptOffsetY(float ZoomFactor, const CUIRect &View)
+{
+	if(g_Config.m_EdZoomTarget)
+	{
+		float PosY = (UI()->MouseY() - View.y) / View.h;
+		m_OffsetEnvelopeY += (m_OffsetEnvelopeY - PosY) * (1.0f - ZoomFactor);
+	}
+	else
+		m_OffsetEnvelopeY += (m_OffsetEnvelopeY - 0.5f) * (1.0f - ZoomFactor);
+}
+
+void CEditor::UpdateZoomEnvelopeY(const CUIRect &View)
+{
+	float OldZoom = m_ZoomEnvelopeY.GetZoom();
+	if(m_ZoomEnvelopeY.UpdateZoom())
+		ZoomAdaptOffsetY(m_ZoomEnvelopeY.GetZoom() / OldZoom, View);
+}
+
+void CEditor::ResetZoomEnvelope(CEnvelope *pEnvelope, int ActiveChannels)
+{
+	pEnvelope->FindTopBottom(ActiveChannels);
+	float Top = pEnvelope->m_Top;
+	float Bottom = pEnvelope->m_Bottom;
+	float EndTime = pEnvelope->EndTime();
+	float ValueRange = absolute(Top - Bottom);
+
+	if(pEnvelope->GetChannels() == 4)
+	{
+		m_OffsetEnvelopeY = 0.1f;
+		m_ZoomEnvelopeY.SetZoomInstant(1.25f);
+	}
+	else
+	{
+		if(ValueRange < 640.0f)
+		{
+			// Set view to some sane default if range is too small
+			m_OffsetEnvelopeY = 0.5f;
+			m_ZoomEnvelopeY.SetZoomInstant(1.25f * 640.0f);
+		}
+		else
+		{
+			m_ZoomEnvelopeY.SetZoomInstant(1.25f * ValueRange);
+			if(Top >= 0 && Bottom >= 0)
+				m_OffsetEnvelopeY = 0.1f - Bottom / m_ZoomEnvelopeY.GetZoom();
+			else if(Top <= 0 && Bottom <= 0)
+				m_OffsetEnvelopeY = 0.1f - Bottom / m_ZoomEnvelopeY.GetZoom();
+			else
+				m_OffsetEnvelopeY = 0.1f + 0.8f * absolute(Bottom) / ValueRange;
+		}
+	}
+
+	m_ZoomEnvelopeX.SetZoomInstant(1.25f * EndTime);
+	m_OffsetEnvelopeX = 0.1;
+}
+
+float fxt2f(int t)
+{
+	return t / 1000.0f;
+}
+
+int f2fxt(float t)
+{
+	return static_cast<int>(t * 1000.0f);
+}
+
+float CEditor::ScreenToEnvelopeX(const CUIRect &View, float x) const
+{
+	return (x - View.x - View.w * m_OffsetEnvelopeX) / View.w * m_ZoomEnvelopeX.GetZoom();
+}
+
+float CEditor::EnvelopeToScreenX(const CUIRect &View, float x) const
+{
+	return View.x + View.w * m_OffsetEnvelopeX + x / m_ZoomEnvelopeX.GetZoom() * View.w;
+}
+
+float CEditor::ScreenToEnvelopeY(const CUIRect &View, float y) const
+{
+	return (View.h - y + View.y) / View.h * m_ZoomEnvelopeY.GetZoom() - m_OffsetEnvelopeY * m_ZoomEnvelopeY.GetZoom();
+}
+
+float CEditor::EnvelopeToScreenY(const CUIRect &View, float y) const
+{
+	return View.y + View.h - y / m_ZoomEnvelopeY.GetZoom() * View.h - m_OffsetEnvelopeY * View.h;
+}
+
+float CEditor::ScreenToEnvelopeDX(const CUIRect &View, float dx)
+{
+	return dx / Graphics()->ScreenWidth() * UI()->Screen()->w / View.w * m_ZoomEnvelopeX.GetZoom();
+}
+
+float CEditor::ScreenToEnvelopeDY(const CUIRect &View, float dy)
+{
+	return dy / Graphics()->ScreenHeight() * UI()->Screen()->h / View.h * m_ZoomEnvelopeY.GetZoom();
+}
+
+void CEditor::RemoveTimeOffsetEnvelope(CEnvelope *pEnvelope)
+{
+	int TimeOffset = pEnvelope->m_vPoints[0].m_Time;
+	for(auto &Point : pEnvelope->m_vPoints)
+		Point.m_Time -= TimeOffset;
+
+	m_OffsetEnvelopeX += fxt2f(TimeOffset) / m_ZoomEnvelopeX.GetZoom();
+};
+
 void CEditor::RenderEnvelopeEditor(CUIRect View)
 {
 	RenderExtraEditorDragBar(View, &m_EnvelopeEditorSplit);
@@ -5619,6 +5741,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 	bool CurrentEnvelopeSwitched = false;
 
 	// do the toolbar
+	static int s_ActiveChannels = 0xf;
 	{
 		CUIRect Button;
 		CEnvelope *pNewEnv = nullptr;
@@ -5682,6 +5805,15 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				m_Map.SwapEnvelopes(m_SelectedEnvelope - 1, m_SelectedEnvelope);
 				m_SelectedEnvelope = clamp<int>(m_SelectedEnvelope - 1, 0, m_Map.m_vpEnvelopes.size() - 1);
 				pEnvelope = m_Map.m_vpEnvelopes[m_SelectedEnvelope];
+			}
+
+			if(pEnvelope)
+			{
+				ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
+				ToolBar.VSplitRight(20.0f, &ToolBar, &Button);
+				static int s_ResetZoomButton = 0;
+				if(DoButton_FontIcon(&s_ResetZoomButton, FONT_ICON_MAGNIFYING_GLASS, 0, &Button, 0, "Reset zoom to default value", IGraphics::CORNER_ALL, 9.0f))
+					ResetZoomEnvelope(pEnvelope, s_ActiveChannels);
 			}
 
 			// Margin on the right side
@@ -5767,15 +5899,19 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ShowColorBar = true;
 		View.HSplitTop(20.0f, &ColorBar, &View);
 		ColorBar.Margin(2.0f, &ColorBar);
-		RenderBackground(ColorBar, m_CheckerTexture, 16.0f, 1.0f);
 	}
 
 	RenderBackground(View, m_CheckerTexture, 32.0f, 0.1f);
 
 	if(pEnvelope)
 	{
+		if(m_ResetZoomEnvelope)
+		{
+			m_ResetZoomEnvelope = false;
+			ResetZoomEnvelope(pEnvelope, s_ActiveChannels);
+		}
+
 		static int s_EnvelopeEditorID = 0;
-		static int s_ActiveChannels = 0xf;
 
 		ColorRGBA aColors[] = {ColorRGBA(1, 0.2f, 0.2f), ColorRGBA(0.2f, 1, 0.2f), ColorRGBA(0.2f, 0.2f, 1), ColorRGBA(1, 1, 0.2f)};
 
@@ -5829,22 +5965,6 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ToolBar.VSplitLeft(40.0f, &Button, &ToolBar);
 		UI()->DoLabel(&Button, "Sync.", 10.0f, TEXTALIGN_ML);
 
-		float EndTime = pEnvelope->EndTime();
-		if(EndTime < 1)
-			EndTime = 1;
-
-		pEnvelope->FindTopBottom(s_ActiveChannels);
-		float Top = pEnvelope->m_Top;
-		float Bottom = pEnvelope->m_Bottom;
-
-		if(Top < 1)
-			Top = 1;
-		if(Bottom >= 0)
-			Bottom = 0;
-
-		float TimeScale = EndTime / View.w;
-		float ValueScale = (Top - Bottom) / View.h;
-
 		if(UI()->MouseInside(&View))
 			UI()->SetHotItem(&s_EnvelopeEditorID);
 
@@ -5854,18 +5974,46 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			if(UI()->MouseButtonClicked(1))
 			{
 				// add point
-				int Time = (int)(((UI()->MouseX() - View.x) * TimeScale) * 1000.0f);
+				float Time = ScreenToEnvelopeX(View, UI()->MouseX());
 				ColorRGBA Channels;
-				pEnvelope->Eval(Time / 1000.0f, Channels);
-				pEnvelope->AddPoint(Time,
+				if(in_range(Time, 0.0f, pEnvelope->EndTime()))
+					pEnvelope->Eval(Time, Channels);
+				else
+					Channels = {0, 0, 0, 0};
+				pEnvelope->AddPoint(f2fxt(Time),
 					f2fx(Channels.r), f2fx(Channels.g),
 					f2fx(Channels.b), f2fx(Channels.a));
+
+				if(Time < 0)
+					RemoveTimeOffsetEnvelope(pEnvelope);
 				m_Map.OnModify();
+			}
+			else if(UI()->MouseButton(2) || (UI()->MouseButton(0) && Input()->ModifierIsPressed()))
+			{
+				m_OffsetEnvelopeX += UI()->MouseDeltaX() / Graphics()->ScreenWidth() * UI()->Screen()->w / View.w;
+				m_OffsetEnvelopeY -= UI()->MouseDeltaY() / Graphics()->ScreenHeight() * UI()->Screen()->h / View.h;
+			}
+			if(Input()->ShiftIsPressed())
+			{
+				if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
+					m_ZoomEnvelopeY.ChangeZoom(0.1f * m_ZoomEnvelopeY.GetZoom());
+				if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
+					m_ZoomEnvelopeY.ChangeZoom(-0.1f * m_ZoomEnvelopeY.GetZoom());
+			}
+			else
+			{
+				if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
+					m_ZoomEnvelopeX.ChangeZoom(0.1f * m_ZoomEnvelopeX.GetZoom());
+				if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
+					m_ZoomEnvelopeX.ChangeZoom(-0.1f * m_ZoomEnvelopeX.GetZoom());
 			}
 
 			m_ShowEnvelopePreview = SHOWENV_SELECTED;
-			m_pTooltip = "Press right mouse button to create a new point";
+			m_pTooltip = "Press right mouse button to create a new point. Use shift to change the zoom axis.";
 		}
+
+		UpdateZoomEnvelopeX(View);
+		UpdateZoomEnvelopeY(View);
 
 		// keep track of selected point to handle value/time text input
 		static const void *s_pSelectedPoint = nullptr;
@@ -5882,36 +6030,36 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 				for(int i = 0; i < (int)pEnvelope->m_vPoints.size(); i++)
 				{
-					const float PosX = pEnvelope->m_vPoints[i].m_Time / 1000.0f / EndTime;
-					const float PosY = (fx2f(pEnvelope->m_vPoints[i].m_aValues[c]) - Bottom) / (Top - Bottom);
+					float PosX = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time));
+					float PosY = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c]));
 
 					// Out-Tangent
 					if(pEnvelope->m_vPoints[i].m_Curvetype == CURVETYPE_BEZIER)
 					{
-						const float OutTangentX = PosX + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] / 1000.0f / EndTime;
-						const float OutTangentY = PosY + fx2f(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]) / (Top - Bottom);
+						float TangentX = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]));
+						float TangentY = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]));
 
 						if(s_pSelectedPoint == &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] || (m_SelectedQuadEnvelope == m_SelectedEnvelope && m_SelectedEnvelopePoint == i))
 							Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.4f);
 						else
 							Graphics()->SetColor(aColors[c].r, aColors[c].g, aColors[c].b, 0.4f);
 
-						IGraphics::CLineItem LineItem(View.x + PosX * View.w, View.y + View.h - PosY * View.h, View.x + OutTangentX * View.w, View.y + View.h - OutTangentY * View.h);
+						IGraphics::CLineItem LineItem(TangentX, TangentY, PosX, PosY);
 						Graphics()->LinesDraw(&LineItem, 1);
 					}
 
 					// In-Tangent
 					if(i > 0 && pEnvelope->m_vPoints[i - 1].m_Curvetype == CURVETYPE_BEZIER)
 					{
-						const float InTangentX = PosX + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] / 1000.0f / EndTime;
-						const float InTangentY = PosY + fx2f(pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c]) / (Top - Bottom);
+						float TangentX = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c]));
+						float TangentY = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c]));
 
 						if(s_pSelectedPoint == &pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] || (m_SelectedQuadEnvelope == m_SelectedEnvelope && m_SelectedEnvelopePoint == i))
 							Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.4f);
 						else
 							Graphics()->SetColor(aColors[c].r, aColors[c].g, aColors[c].b, 0.4f);
 
-						IGraphics::CLineItem LineItem(View.x + PosX * View.w, View.y + View.h - PosY * View.h, View.x + InTangentX * View.w, View.y + View.h - InTangentY * View.h);
+						IGraphics::CLineItem LineItem(TangentX, TangentY, PosX, PosY);
 						Graphics()->LinesDraw(&LineItem, 1);
 					}
 				}
@@ -5922,6 +6070,13 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 		// render lines
 		{
+			float EndTimeTotal = maximum(0.000001f, pEnvelope->EndTime());
+			float EndX = clamp(EnvelopeToScreenX(View, EndTimeTotal), View.x, View.x + View.w);
+			float StartX = clamp(View.x + View.w * m_OffsetEnvelopeX, View.x, View.x + View.w);
+
+			float EndTime = ScreenToEnvelopeX(View, EndX);
+			float StartTime = ScreenToEnvelopeX(View, StartX);
+
 			UI()->ClipEnable(&View);
 			Graphics()->TextureClear();
 			Graphics()->LinesBegin();
@@ -5932,23 +6087,26 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				else
 					Graphics()->SetColor(aColors[c].r * 0.5f, aColors[c].g * 0.5f, aColors[c].b * 0.5f, 1);
 
-				float PrevX = 0;
+				int Steps = static_cast<int>(((EndX - StartX) / UI()->Screen()->w) * Graphics()->ScreenWidth());
+				float StepTime = (EndTime - StartTime) / static_cast<float>(Steps);
+				float StepSize = (EndX - StartX) / static_cast<float>(Steps);
+
 				ColorRGBA Channels;
-				pEnvelope->Eval(0.000001f, Channels);
-				float PrevValue = Channels[c];
-
-				int Steps = (int)((View.w / UI()->Screen()->w) * Graphics()->ScreenWidth());
-				for(int i = 1; i <= Steps; i++)
+				pEnvelope->Eval(StartTime + StepTime, Channels);
+				float PrevY = EnvelopeToScreenY(View, Channels[c]);
+				for(int i = 2; i < Steps; i++)
 				{
-					float a = i / (float)Steps;
-					pEnvelope->Eval(a * EndTime, Channels);
-					float v = Channels[c];
-					v = (v - Bottom) / (Top - Bottom);
+					pEnvelope->Eval(StartTime + i * StepTime, Channels);
+					float CurrentY = EnvelopeToScreenY(View, Channels[c]);
 
-					IGraphics::CLineItem LineItem(View.x + PrevX * View.w, View.y + View.h - PrevValue * View.h, View.x + a * View.w, View.y + View.h - v * View.h);
+					IGraphics::CLineItem LineItem(
+						StartX + (i - 1) * StepSize,
+						PrevY,
+						StartX + i * StepSize,
+						CurrentY);
 					Graphics()->LinesDraw(&LineItem, 1);
-					PrevX = a;
-					PrevValue = v;
+
+					PrevY = CurrentY;
 				}
 			}
 			Graphics()->LinesEnd();
@@ -5959,11 +6117,11 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		{
 			for(int i = 0; i < (int)pEnvelope->m_vPoints.size() - 1; i++)
 			{
-				float t0 = pEnvelope->m_vPoints[i].m_Time / 1000.0f / EndTime;
-				float t1 = pEnvelope->m_vPoints[i + 1].m_Time / 1000.0f / EndTime;
+				float t0 = fxt2f(pEnvelope->m_vPoints[i].m_Time);
+				float t1 = fxt2f(pEnvelope->m_vPoints[i + 1].m_Time);
 
 				CUIRect CurveButton;
-				CurveButton.x = CurveBar.x + (t0 + (t1 - t0) * 0.5f) * CurveBar.w;
+				CurveButton.x = EnvelopeToScreenX(View, t0 + (t1 - t0) * 0.5f);
 				CurveButton.y = CurveBar.y;
 				CurveButton.h = CurveBar.h;
 				CurveButton.w = CurveBar.h;
@@ -5973,14 +6131,29 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				const char *pTypeName = "!?";
 				if(0 <= pEnvelope->m_vPoints[i].m_Curvetype && pEnvelope->m_vPoints[i].m_Curvetype < (int)std::size(apTypeName))
 					pTypeName = apTypeName[pEnvelope->m_vPoints[i].m_Curvetype];
-				if(DoButton_Editor(pID, pTypeName, 0, &CurveButton, 0, "Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier)"))
-					pEnvelope->m_vPoints[i].m_Curvetype = (pEnvelope->m_vPoints[i].m_Curvetype + 1) % NUM_CURVETYPES;
+
+				if(CurveButton.x >= View.x)
+				{
+					if(DoButton_Editor(pID, pTypeName, 0, &CurveButton, 0, "Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier)"))
+						pEnvelope->m_vPoints[i].m_Curvetype = (pEnvelope->m_vPoints[i].m_Curvetype + 1) % NUM_CURVETYPES;
+				}
 			}
 		}
 
 		// render colorbar
 		if(ShowColorBar)
 		{
+			UI()->ClipEnable(&ColorBar);
+
+			float StartX = maximum(EnvelopeToScreenX(View, 0), ColorBar.x);
+			float EndX = EnvelopeToScreenX(View, pEnvelope->EndTime());
+			CUIRect BackgroundView{
+				StartX,
+				ColorBar.y,
+				minimum(EndX - StartX, ColorBar.x + ColorBar.w - StartX),
+				ColorBar.h};
+			RenderBackground(BackgroundView, m_CheckerTexture, 16.0f, 1.0f);
+
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
 			for(int i = 0; i < (int)pEnvelope->m_vPoints.size() - 1; i++)
@@ -6000,13 +6173,14 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 					IGraphics::CColorVertex(3, r0, g0, b0, a0)};
 				Graphics()->SetColorVertex(Array, 4);
 
-				float x0 = pEnvelope->m_vPoints[i].m_Time / 1000.0f / EndTime;
-				float x1 = pEnvelope->m_vPoints[i + 1].m_Time / 1000.0f / EndTime;
+				float x0 = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time));
+				float x1 = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i + 1].m_Time));
 
-				IGraphics::CQuadItem QuadItem(ColorBar.x + x0 * ColorBar.w, ColorBar.y, (x1 - x0) * ColorBar.w, ColorBar.h);
+				IGraphics::CQuadItem QuadItem(x0, ColorBar.y, x1 - x0, ColorBar.h);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 			}
 			Graphics()->QuadsEnd();
+			UI()->ClipDisable();
 		}
 
 		// render handles
@@ -6021,9 +6195,12 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			// update displayed text
 			s_CurValueInput.SetFloat(0.0f);
 			s_CurTimeInput.SetFloat(0.0f);
+
+			m_ResetZoomEnvelope = true;
 		}
 
 		{
+			UI()->ClipEnable(&View);
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
 			for(int c = 0; c < pEnvelope->GetChannels(); c++)
@@ -6035,11 +6212,9 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				{
 					// point handle
 					{
-						const float PosX = pEnvelope->m_vPoints[i].m_Time / 1000.0f / EndTime;
-						const float PosY = (fx2f(pEnvelope->m_vPoints[i].m_aValues[c]) - Bottom) / (Top - Bottom);
 						CUIRect Final;
-						Final.x = View.x + PosX * View.w;
-						Final.y = View.y + View.h - PosY * View.h;
+						Final.x = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time));
+						Final.y = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c]));
 						Final.x -= 2.0f;
 						Final.y -= 2.0f;
 						Final.w = 4.0f;
@@ -6047,7 +6222,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 						const void *pID = &pEnvelope->m_vPoints[i].m_aValues[c];
 
-						if(UI()->MouseInside(&Final))
+						if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
 							UI()->SetHotItem(pID);
 
 						float ColorMod = 1.0f;
@@ -6065,21 +6240,27 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							{
 								if(Input()->ShiftIsPressed())
 								{
-									if(i != 0)
-									{
-										float DeltaX = m_MouseDeltaX * TimeScale * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
-										DeltaX = DeltaX < 0 ? -std::ceil(-DeltaX) : std::ceil(DeltaX);
-										pEnvelope->m_vPoints[i].m_Time += (int)DeltaX;
+									float DeltaX = ScreenToEnvelopeDX(View, UI()->MouseDeltaX()) * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
+									DeltaX = DeltaX < 0 ? -std::ceil(-DeltaX) : std::ceil(DeltaX);
+									pEnvelope->m_vPoints[i].m_Time += (int)DeltaX;
 
-										if(pEnvelope->m_vPoints[i].m_Time < pEnvelope->m_vPoints[i - 1].m_Time)
-											pEnvelope->m_vPoints[i].m_Time = pEnvelope->m_vPoints[i - 1].m_Time + 1;
-										if(i + 1 != pEnvelope->m_vPoints.size() && pEnvelope->m_vPoints[i].m_Time > pEnvelope->m_vPoints[i + 1].m_Time)
-											pEnvelope->m_vPoints[i].m_Time = pEnvelope->m_vPoints[i + 1].m_Time - 1;
-									}
+									if(i == 0 && pEnvelope->m_vPoints[i].m_Time != 0)
+										RemoveTimeOffsetEnvelope(pEnvelope);
+									if(i != 0 && pEnvelope->m_vPoints[i].m_Time < pEnvelope->m_vPoints[i - 1].m_Time)
+										pEnvelope->m_vPoints[i].m_Time = pEnvelope->m_vPoints[i - 1].m_Time + 1;
+									if(i < pEnvelope->m_vPoints.size() - 1 && pEnvelope->m_vPoints[i].m_Time > pEnvelope->m_vPoints[i + 1].m_Time)
+										pEnvelope->m_vPoints[i].m_Time = pEnvelope->m_vPoints[i + 1].m_Time - 1;
+
+									pEnvelope->m_vPoints[i].m_Time = clamp(pEnvelope->m_vPoints[i].m_Time, f2fxt(ScreenToEnvelopeX(View, View.x)), f2fxt(ScreenToEnvelopeX(View, View.x + View.w)));
 								}
 								else
 								{
-									pEnvelope->m_vPoints[i].m_aValues[c] -= f2fx(m_MouseDeltaY * (Input()->ModifierIsPressed() ? 0.001f : ValueScale));
+									pEnvelope->m_vPoints[i].m_aValues[c] -= f2fx(ScreenToEnvelopeDY(View, UI()->MouseDeltaY()) * (Input()->ModifierIsPressed() ? 0.005f : 1.0f));
+
+									if(pEnvelope->GetChannels() == 4)
+										pEnvelope->m_vPoints[i].m_aValues[c] = clamp(pEnvelope->m_vPoints[i].m_aValues[c], 0, 1024);
+									else
+										pEnvelope->m_vPoints[i].m_aValues[c] = clamp(pEnvelope->m_vPoints[i].m_aValues[c], f2fx(ScreenToEnvelopeY(View, View.y + View.h)), f2fx(ScreenToEnvelopeY(View, View.y)));
 								}
 
 								m_SelectedQuadEnvelope = m_SelectedEnvelope;
@@ -6100,7 +6281,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							}
 
 							// remove point
-							if(UI()->MouseButtonClicked(1))
+							if(UI()->MouseButtonClicked(1) && pEnvelope->m_vPoints.size() > 2)
 							{
 								if(s_pSelectedPoint == pID)
 								{
@@ -6161,18 +6342,12 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 					// tangent handles for bezier curves
 					{
-						const float PosX = pEnvelope->m_vPoints[i].m_Time / 1000.0f / EndTime;
-						const float PosY = (fx2f(pEnvelope->m_vPoints[i].m_aValues[c]) - Bottom) / (Top - Bottom);
-
 						// Out-Tangent handle
 						if(pEnvelope->m_vPoints[i].m_Curvetype == CURVETYPE_BEZIER)
 						{
-							const float OutTangentX = PosX + (pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] / 1000.0f / EndTime);
-							const float OutTangentY = PosY + fx2f(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]) / (Top - Bottom);
-
 							CUIRect Final;
-							Final.x = View.x + OutTangentX * View.w;
-							Final.y = View.y + View.h - OutTangentY * View.h;
+							Final.x = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]));
+							Final.y = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]));
 							Final.x -= 2.0f;
 							Final.y -= 2.0f;
 							Final.w = 4.0f;
@@ -6183,7 +6358,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							const void *pID = &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c];
 
 							float ColorMod = 1.0f;
-							if(UI()->MouseInside(&Final))
+							if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
 								UI()->SetHotItem(pID);
 
 							if(UI()->CheckActiveItem(pID))
@@ -6197,13 +6372,13 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 								}
 								else
 								{
-									float DeltaX = m_MouseDeltaX * TimeScale * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
+									float DeltaX = ScreenToEnvelopeDX(View, UI()->MouseDeltaX()) * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
 									DeltaX = DeltaX < 0 ? -std::ceil(-DeltaX) : std::ceil(DeltaX);
 									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] += (int)DeltaX;
-									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c] -= f2fx(m_MouseDeltaY * (Input()->ModifierIsPressed() ? 0.005f : ValueScale));
+									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c] -= f2fx(ScreenToEnvelopeDY(View, UI()->MouseDeltaY()) * (Input()->ModifierIsPressed() ? 0.005f : 1.0f));
 
 									// clamp time value
-									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = clamp<int>(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c], 0, EndTime * 1000.0f - pEnvelope->m_vPoints[i].m_Time);
+									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = clamp<int>(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c], 0, f2fxt(ScreenToEnvelopeX(View, View.x + View.w)) - pEnvelope->m_vPoints[i].m_Time);
 
 									m_SelectedQuadEnvelope = m_SelectedEnvelope;
 									m_ShowEnvelopePreview = SHOWENV_SELECTED;
@@ -6238,7 +6413,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 							if(pID == s_pSelectedPoint && UI()->ConsumeHotkey(CUI::HOTKEY_ENTER))
 							{
-								pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = clamp<int>(s_CurTimeInput.GetFloat() * 1000.0f - pEnvelope->m_vPoints[i].m_Time, 0, EndTime * 1000.0f - pEnvelope->m_vPoints[i].m_Time);
+								pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = clamp<int>(s_CurTimeInput.GetFloat() * 1000.0f - pEnvelope->m_vPoints[i].m_Time, 0, pEnvelope->m_vPoints[i + 1].m_Time - pEnvelope->m_vPoints[i].m_Time);
 								pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c] = f2fx(s_CurValueInput.GetFloat()) - pEnvelope->m_vPoints[i].m_aValues[c];
 								Updated = true;
 							}
@@ -6266,12 +6441,9 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 						// In-Tangent handle
 						if(i > 0 && pEnvelope->m_vPoints[i - 1].m_Curvetype == CURVETYPE_BEZIER)
 						{
-							const float InTangentX = PosX + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] / 1000.0f / EndTime;
-							const float InTangentY = PosY + fx2f(pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c]) / (Top - Bottom);
-
 							CUIRect Final;
-							Final.x = View.x + InTangentX * View.w;
-							Final.y = View.y + View.h - InTangentY * View.h;
+							Final.x = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c]));
+							Final.y = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c]));
 							Final.x -= 2.0f;
 							Final.y -= 2.0f;
 							Final.w = 4.0f;
@@ -6282,7 +6454,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							const void *pID = &pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c];
 
 							float ColorMod = 1.0f;
-							if(UI()->MouseInside(&Final))
+							if(UI()->MouseInside(&Final) && UI()->MouseInside(&View))
 								UI()->SetHotItem(pID);
 
 							if(UI()->CheckActiveItem(pID))
@@ -6296,13 +6468,13 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 								}
 								else
 								{
-									float DeltaX = m_MouseDeltaX * TimeScale * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
+									float DeltaX = ScreenToEnvelopeDX(View, UI()->MouseDeltaX()) * (Input()->ModifierIsPressed() ? 1.0f : 1000.0f);
 									DeltaX = DeltaX < 0 ? -std::ceil(-DeltaX) : std::ceil(DeltaX);
 									pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] += (int)DeltaX;
-									pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c] -= f2fx(m_MouseDeltaY * (Input()->ModifierIsPressed() ? 0.005f : ValueScale));
+									pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaY[c] -= f2fx(ScreenToEnvelopeDY(View, UI()->MouseDeltaY()) * (Input()->ModifierIsPressed() ? 0.005f : 1.0f));
 
 									// clamp time value
-									pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] = clamp(pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c], -pEnvelope->m_vPoints[i].m_Time, 0);
+									pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c] = clamp(pEnvelope->m_vPoints[i].m_Bezier.m_aInTangentDeltaX[c], f2fxt(ScreenToEnvelopeX(View, View.x)) - pEnvelope->m_vPoints[i].m_Time, 0);
 
 									m_SelectedQuadEnvelope = m_SelectedEnvelope;
 									m_ShowEnvelopePreview = SHOWENV_SELECTED;
@@ -6365,6 +6537,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				}
 			}
 			Graphics()->QuadsEnd();
+			UI()->ClipDisable();
 		}
 
 		if(s_pSelectedPoint != nullptr)
@@ -6654,7 +6827,7 @@ void CEditor::RenderMenubar(CUIRect MenuBar)
 	char aTimeStr[6];
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
 
-	str_format(aBuf, sizeof(aBuf), "X: %.1f, Y: %.1f, Z: %.1f, A: %.1f, G: %i  %s", UI()->MouseWorldX() / 32.0f, UI()->MouseWorldY() / 32.0f, m_Zoom, m_AnimateSpeed, m_GridFactor, aTimeStr);
+	str_format(aBuf, sizeof(aBuf), "X: %.1f, Y: %.1f, Z: %.1f, A: %.1f, G: %i  %s", UI()->MouseWorldX() / 32.0f, UI()->MouseWorldY() / 32.0f, m_ZoomMapView.GetZoom(), m_AnimateSpeed, m_GridFactor, aTimeStr);
 	UI()->DoLabel(&Info, aBuf, 10.0f, TEXTALIGN_MR);
 
 	static int s_CloseButton = 0;
@@ -6711,14 +6884,14 @@ void CEditor::Render()
 	{
 		// handle zoom hotkeys
 		if(Input()->KeyPress(KEY_KP_MINUS))
-			ChangeZoom(50.0f);
+			m_ZoomMapView.ChangeZoom(50.0f);
 		if(Input()->KeyPress(KEY_KP_PLUS))
-			ChangeZoom(-50.0f);
+			m_ZoomMapView.ChangeZoom(-50.0f);
 		if(Input()->KeyPress(KEY_KP_MULTIPLY))
 		{
 			m_EditorOffsetX = 0;
 			m_EditorOffsetY = 0;
-			SetZoom(100.0f);
+			m_ZoomMapView.SetZoom(100.0f);
 		}
 
 		// handle brush save/load hotkeys
@@ -6933,12 +7106,12 @@ void CEditor::Render()
 	if(m_Dialog == DIALOG_NONE && !UI()->IsPopupHovered() && (!m_GuiActive || UI()->MouseInside(&View)))
 	{
 		if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
-			ChangeZoom(20.0f);
+			m_ZoomMapView.ChangeZoom(20.0f);
 		if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
-			ChangeZoom(-20.0f);
+			m_ZoomMapView.ChangeZoom(-20.0f);
 	}
 
-	UpdateZoom();
+	UpdateZoomWorld();
 
 	// Popup menus must be rendered before the statusbar, because UI elements in
 	// popup menus can set tooltips, which are rendered in the status bar.
@@ -7043,8 +7216,6 @@ void CEditor::Reset(bool CreateDefault)
 	m_EditorOffsetX = 0.0f;
 	m_EditorOffsetY = 0.0f;
 
-	m_Zoom = 200.0f;
-	m_Zooming = false;
 	m_WorldZoom = 1.0f;
 
 	m_MouseDeltaX = 0;
@@ -7064,46 +7235,18 @@ void CEditor::Reset(bool CreateDefault)
 
 int CEditor::GetLineDistance() const
 {
-	if(m_Zoom <= 100.0f)
+	if(m_ZoomMapView.GetZoom() <= 100.0f)
 		return 16;
-	else if(m_Zoom <= 250.0f)
+	else if(m_ZoomMapView.GetZoom() <= 250.0f)
 		return 32;
-	else if(m_Zoom <= 450.0f)
+	else if(m_ZoomMapView.GetZoom() <= 450.0f)
 		return 64;
-	else if(m_Zoom <= 850.0f)
+	else if(m_ZoomMapView.GetZoom() <= 850.0f)
 		return 128;
-	else if(m_Zoom <= 1550.0f)
+	else if(m_ZoomMapView.GetZoom() <= 1550.0f)
 		return 256;
 	else
 		return 512;
-}
-
-void CEditor::SetZoom(float Target)
-{
-	Target = clamp(Target, MinZoomLevel(), MaxZoomLevel());
-
-	const float Now = Client()->GlobalTime();
-	float Current = m_Zoom;
-	float Derivative = 0.0f;
-	if(m_Zooming)
-	{
-		const float Progress = ZoomProgress(Now);
-		Current = m_ZoomSmoothing.Evaluate(Progress);
-		Derivative = m_ZoomSmoothing.Derivative(Progress);
-	}
-
-	m_ZoomSmoothingTarget = Target;
-	m_ZoomSmoothing = CCubicBezier::With(Current, Derivative, 0.0f, m_ZoomSmoothingTarget);
-	m_ZoomSmoothingStart = Now;
-	m_ZoomSmoothingEnd = Now + g_Config.m_EdSmoothZoomTime / 1000.0f;
-
-	m_Zooming = true;
-}
-
-void CEditor::ChangeZoom(float Amount)
-{
-	const float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
-	SetZoom(CurrentTarget + Amount);
 }
 
 void CEditor::ZoomMouseTarget(float ZoomFactor)
@@ -7126,47 +7269,14 @@ void CEditor::ZoomMouseTarget(float ZoomFactor)
 	m_WorldOffsetY += (Mwy - m_WorldOffsetY) * (1.0f - ZoomFactor);
 }
 
-void CEditor::UpdateZoom()
+void CEditor::UpdateZoomWorld()
 {
-	if(m_Zooming)
-	{
-		const float Time = Client()->GlobalTime();
-		const float OldLevel = m_Zoom;
-		if(Time >= m_ZoomSmoothingEnd)
-		{
-			m_Zoom = m_ZoomSmoothingTarget;
-			m_Zooming = false;
-		}
-		else
-		{
-			m_Zoom = m_ZoomSmoothing.Evaluate(ZoomProgress(Time));
-			if((OldLevel < m_ZoomSmoothingTarget && m_Zoom > m_ZoomSmoothingTarget) || (OldLevel > m_ZoomSmoothingTarget && m_Zoom < m_ZoomSmoothingTarget))
-			{
-				m_Zoom = m_ZoomSmoothingTarget;
-				m_Zooming = false;
-			}
-		}
-		m_Zoom = clamp(m_Zoom, MinZoomLevel(), MaxZoomLevel());
-		if(g_Config.m_EdZoomTarget)
-			ZoomMouseTarget(m_Zoom / OldLevel);
-	}
-
-	m_WorldZoom = m_Zoom / 100.0f;
-}
-
-float CEditor::MinZoomLevel() const
-{
-	return 10.0f;
-}
-
-float CEditor::MaxZoomLevel() const
-{
-	return g_Config.m_EdLimitMaxZoomLevel ? 2000.0f : std::numeric_limits<float>::max();
-}
-
-float CEditor::ZoomProgress(float CurrentTime) const
-{
-	return (CurrentTime - m_ZoomSmoothingStart) / (m_ZoomSmoothingEnd - m_ZoomSmoothingStart);
+	float OldLevel = m_ZoomMapView.GetZoom();
+	m_ZoomMapView.SetZoomRange(10.0f, g_Config.m_EdLimitMaxZoomLevel ? 2000.0f : std::numeric_limits<float>::max());
+	float NewLevel = m_ZoomMapView.GetZoom();
+	if(m_ZoomMapView.UpdateZoom() && g_Config.m_EdZoomTarget)
+		ZoomMouseTarget(NewLevel / OldLevel);
+	m_WorldZoom = NewLevel / 100.0f;
 }
 
 void CEditor::Goto(float X, float Y)
@@ -7808,4 +7918,91 @@ void CEditorMap::MakeTuneLayer(CLayer *pLayer)
 	m_pTuneLayer = (CLayerTune *)pLayer;
 	m_pTuneLayer->m_pEditor = m_pEditor;
 	m_pTuneLayer->m_Texture = m_pEditor->GetTuneTexture();
+}
+
+CSmoothZoom::CSmoothZoom(float InitialZoom, float Min, float Max, CEditor *pEditor)
+{
+	m_Zoom = InitialZoom;
+	m_MinZoomLevel = Min;
+	m_MaxZoomLevel = Max;
+	m_pEditor = pEditor;
+	m_Zooming = false;
+}
+
+void CSmoothZoom::SetZoom(float Target)
+{
+	Target = clamp(Target, m_MinZoomLevel, m_MaxZoomLevel);
+
+	const float Now = m_pEditor->Client()->GlobalTime();
+	float Current = m_Zoom;
+	float Derivative = 0.0f;
+	if(m_Zooming)
+	{
+		const float Progress = ZoomProgress(Now);
+		Current = m_ZoomSmoothing.Evaluate(Progress);
+		Derivative = m_ZoomSmoothing.Derivative(Progress);
+	}
+
+	m_ZoomSmoothingTarget = Target;
+	m_ZoomSmoothing = CCubicBezier::With(Current, Derivative, 0.0f, m_ZoomSmoothingTarget);
+	m_ZoomSmoothingStart = Now;
+	m_ZoomSmoothingEnd = Now + g_Config.m_EdSmoothZoomTime / 1000.0f;
+
+	m_Zooming = true;
+}
+
+void CSmoothZoom::ChangeZoom(float Amount)
+{
+	const float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
+	SetZoom(CurrentTarget + Amount);
+}
+
+bool CSmoothZoom::UpdateZoom()
+{
+	if(m_Zooming)
+	{
+		const float Time = m_pEditor->Client()->GlobalTime();
+		const float OldLevel = m_Zoom;
+		if(Time >= m_ZoomSmoothingEnd)
+		{
+			m_Zoom = m_ZoomSmoothingTarget;
+			m_Zooming = false;
+		}
+		else
+		{
+			m_Zoom = m_ZoomSmoothing.Evaluate(ZoomProgress(Time));
+			if((OldLevel < m_ZoomSmoothingTarget && m_Zoom > m_ZoomSmoothingTarget) || (OldLevel > m_ZoomSmoothingTarget && m_Zoom < m_ZoomSmoothingTarget))
+			{
+				m_Zoom = m_ZoomSmoothingTarget;
+				m_Zooming = false;
+			}
+		}
+		m_Zoom = clamp(m_Zoom, m_MinZoomLevel, m_MaxZoomLevel);
+
+		return true;
+	}
+
+	return false;
+}
+
+float CSmoothZoom::ZoomProgress(float CurrentTime) const
+{
+	return (CurrentTime - m_ZoomSmoothingStart) / (m_ZoomSmoothingEnd - m_ZoomSmoothingStart);
+}
+
+float CSmoothZoom::GetZoom() const
+{
+	return m_Zoom;
+}
+
+void CSmoothZoom::SetZoomRange(float Min, float Max)
+{
+	m_MinZoomLevel = Min;
+	m_MaxZoomLevel = Max;
+}
+
+void CSmoothZoom::SetZoomInstant(float Target)
+{
+	m_Zooming = false;
+	m_Zoom = Target;
 }
