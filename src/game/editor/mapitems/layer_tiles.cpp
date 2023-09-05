@@ -260,7 +260,7 @@ static void InitGrabbedLayer(std::shared_ptr<T> pLayer, CLayerTiles *pThisLayer)
 	}
 };
 
-int CLayerTiles::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
+int CLayerTiles::BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect)
 {
 	RECTi r;
 	Convert(Rect, &r);
@@ -411,7 +411,7 @@ int CLayerTiles::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
 	return 1;
 }
 
-void CLayerTiles::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect)
+void CLayerTiles::FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect)
 {
 	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
 		return;
@@ -459,7 +459,7 @@ void CLayerTiles::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIR
 	FlagModified(sx, sy, w, h);
 }
 
-void CLayerTiles::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerTiles::BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	if(m_Readonly)
 		return;
@@ -1075,12 +1075,12 @@ void CLayerTiles::FlagModified(int x, int y, int w, int h)
 	}
 }
 
-void CLayerTiles::ModifyImageIndex(FIndexModifyFunction Func)
+void CLayerTiles::ModifyImageIndex(const FIndexModifyFunction &Func)
 {
 	Func(&m_Image);
 }
 
-void CLayerTiles::ModifyEnvelopeIndex(FIndexModifyFunction Func)
+void CLayerTiles::ModifyEnvelopeIndex(const FIndexModifyFunction &Func)
 {
 	Func(&m_ColorEnv);
 }

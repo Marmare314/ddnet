@@ -55,7 +55,7 @@ bool CLayerTune::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 	return true;
 }
 
-void CLayerTune::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerTune::BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	if(m_Readonly)
 		return;
@@ -162,7 +162,7 @@ void CLayerTune::BrushRotate(float Amount)
 	}
 }
 
-void CLayerTune::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect)
+void CLayerTune::FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect)
 {
 	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
 		return;

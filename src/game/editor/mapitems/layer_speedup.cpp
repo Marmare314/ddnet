@@ -55,7 +55,7 @@ bool CLayerSpeedup::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 	return true;
 }
 
-void CLayerSpeedup::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerSpeedup::BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	if(m_Readonly)
 		return;
@@ -177,7 +177,7 @@ void CLayerSpeedup::BrushRotate(float Amount)
 	}
 }
 
-void CLayerSpeedup::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect)
+void CLayerSpeedup::FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect)
 {
 	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
 		return;

@@ -106,7 +106,7 @@ void CLayerQuads::BrushSelecting(CUIRect Rect)
 	Graphics()->LinesEnd();
 }
 
-int CLayerQuads::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
+int CLayerQuads::BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect)
 {
 	// create new layers
 	std::shared_ptr<CLayerQuads> pGrabbed = std::make_shared<CLayerQuads>(Editor());
@@ -136,7 +136,7 @@ int CLayerQuads::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
 	return pGrabbed->m_vQuads.empty() ? 0 : 1;
 }
 
-void CLayerQuads::BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerQuads::BrushPlace(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	std::shared_ptr<CLayerQuads> pQuadLayer = std::static_pointer_cast<CLayerQuads>(pBrush);
 	for(const auto &Quad : pQuadLayer->m_vQuads)
@@ -248,12 +248,12 @@ CUI::EPopupMenuFunctionResult CLayerQuads::RenderProperties(CUIRect *pToolBox)
 	return CUI::POPUP_KEEP_OPEN;
 }
 
-void CLayerQuads::ModifyImageIndex(FIndexModifyFunction Func)
+void CLayerQuads::ModifyImageIndex(const FIndexModifyFunction &Func)
 {
 	Func(&m_Image);
 }
 
-void CLayerQuads::ModifyEnvelopeIndex(FIndexModifyFunction Func)
+void CLayerQuads::ModifyEnvelopeIndex(const FIndexModifyFunction &Func)
 {
 	for(auto &Quad : m_vQuads)
 	{

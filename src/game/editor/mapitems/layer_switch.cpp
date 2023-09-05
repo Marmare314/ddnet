@@ -55,7 +55,7 @@ bool CLayerSwitch::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 	return true;
 }
 
-void CLayerSwitch::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerSwitch::BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	if(m_Readonly)
 		return;
@@ -183,7 +183,7 @@ void CLayerSwitch::BrushRotate(float Amount)
 	}
 }
 
-void CLayerSwitch::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect)
+void CLayerSwitch::FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect)
 {
 	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
 		return;

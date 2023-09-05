@@ -55,7 +55,7 @@ bool CLayerTele::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 	return true;
 }
 
-void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerTele::BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	if(m_Readonly)
 		return;
@@ -168,7 +168,7 @@ void CLayerTele::BrushRotate(float Amount)
 	}
 }
 
-void CLayerTele::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect)
+void CLayerTele::FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect)
 {
 	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
 		return;

@@ -14,13 +14,13 @@ public:
 	CSoundSource *NewSource(int x, int y);
 
 	void BrushSelecting(CUIRect Rect) override;
-	int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) override;
-	void BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
+	int BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect) override;
+	void BrushPlace(const std::shared_ptr<CLayer> &pBrush, float wx, float wy) override;
 
 	CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) override;
 
-	void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) override;
-	void ModifySoundIndex(FIndexModifyFunction pfnFunc) override;
+	void ModifyEnvelopeIndex(const FIndexModifyFunction &pfnFunc) override;
+	void ModifySoundIndex(const FIndexModifyFunction &pfnFunc) override;
 
 	std::shared_ptr<CLayer> Duplicate() const override;
 

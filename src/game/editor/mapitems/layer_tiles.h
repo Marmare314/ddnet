@@ -106,9 +106,9 @@ public:
 
 	virtual bool IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer);
 	void BrushSelecting(CUIRect Rect) override;
-	int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) override;
-	void FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect) override;
-	void BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
+	int BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect) override;
+	void FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect) override;
+	void BrushDraw(const std::shared_ptr<CLayer> &pBrush, float wx, float wy) override;
 	void BrushFlipX() override;
 	void BrushFlipY() override;
 	void BrushRotate(float Amount) override;
@@ -132,8 +132,8 @@ public:
 	};
 	static CUI::EPopupMenuFunctionResult RenderCommonProperties(SCommonPropState &State, CEditor *pEditor, CUIRect *pToolbox, std::vector<std::shared_ptr<CLayerTiles>> &vpLayers);
 
-	void ModifyImageIndex(FIndexModifyFunction pfnFunc) override;
-	void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) override;
+	void ModifyImageIndex(const FIndexModifyFunction &pfnFunc) override;
+	void ModifyEnvelopeIndex(const FIndexModifyFunction &pfnFunc) override;
 
 	void PrepareForSave();
 	void ExtractTiles(int TilemapItemVersion, const CTile *pSavedTiles, size_t SavedTilesSize);

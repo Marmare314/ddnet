@@ -141,7 +141,7 @@ void CLayerSounds::BrushSelecting(CUIRect Rect)
 	Graphics()->LinesEnd();
 }
 
-int CLayerSounds::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
+int CLayerSounds::BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect)
 {
 	// create new layer
 	std::shared_ptr<CLayerSounds> pGrabbed = std::make_shared<CLayerSounds>(Editor());
@@ -167,7 +167,7 @@ int CLayerSounds::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
 	return pGrabbed->m_vSources.empty() ? 0 : 1;
 }
 
-void CLayerSounds::BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy)
+void CLayerSounds::BrushPlace(const std::shared_ptr<CLayer> &pBrush, float wx, float wy)
 {
 	std::shared_ptr<CLayerSounds> pSoundLayer = std::static_pointer_cast<CLayerSounds>(pBrush);
 	for(const auto &Source : pSoundLayer->m_vSources)
@@ -214,12 +214,12 @@ CUI::EPopupMenuFunctionResult CLayerSounds::RenderProperties(CUIRect *pToolBox)
 	return CUI::POPUP_KEEP_OPEN;
 }
 
-void CLayerSounds::ModifySoundIndex(FIndexModifyFunction Func)
+void CLayerSounds::ModifySoundIndex(const FIndexModifyFunction &Func)
 {
 	Func(&m_Sound);
 }
 
-void CLayerSounds::ModifyEnvelopeIndex(FIndexModifyFunction Func)
+void CLayerSounds::ModifyEnvelopeIndex(const FIndexModifyFunction &Func)
 {
 	for(auto &Source : m_vSources)
 	{

@@ -14,32 +14,24 @@ class CLayer : public CEditorComponent
 public:
 	explicit CLayer(CEditor *pEditor)
 	{
-		m_Type = LAYERTYPE_INVALID;
-		str_copy(m_aName, "(invalid)");
-		m_Visible = true;
-		m_Readonly = false;
-		m_Flags = 0;
 		Init(pEditor);
 	}
 
-	CLayer(const CLayer &Other) : CEditorComponent(Other)
+	CLayer(const CLayer &Other) :
+		CEditorComponent(Other)
 	{
 		str_copy(m_aName, Other.m_aName);
 		m_Flags = Other.m_Flags;
 		m_Type = Other.m_Type;
-		m_Visible = true;
-		m_Readonly = false;
 	}
 
-	virtual ~CLayer()
-	{
-	}
+	virtual ~CLayer() = default;
 
 	virtual void BrushSelecting(CUIRect Rect) {}
-	virtual int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) { return 0; }
-	virtual void FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect) {}
-	virtual void BrushDraw(std::shared_ptr<CLayer> pBrush, float x, float y) {}
-	virtual void BrushPlace(std::shared_ptr<CLayer> pBrush, float x, float y) {}
+	virtual int BrushGrab(const std::shared_ptr<CLayerGroup> &pBrush, CUIRect Rect) { return 0; }
+	virtual void FillSelection(bool Empty, const std::shared_ptr<CLayer> &pBrush, CUIRect Rect) {}
+	virtual void BrushDraw(const std::shared_ptr<CLayer> &pBrush, float x, float y) {}
+	virtual void BrushPlace(const std::shared_ptr<CLayer> &pBrush, float x, float y) {}
 	virtual void BrushFlipX() {}
 	virtual void BrushFlipY() {}
 	virtual void BrushRotate(float Amount) {}
@@ -49,9 +41,9 @@ public:
 	virtual void Render(bool Tileset = false) {}
 	virtual CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) { return CUI::POPUP_KEEP_OPEN; }
 
-	virtual void ModifyImageIndex(FIndexModifyFunction pfnFunc) {}
-	virtual void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) {}
-	virtual void ModifySoundIndex(FIndexModifyFunction pfnFunc) {}
+	virtual void ModifyImageIndex(const FIndexModifyFunction &pfnFunc) {}
+	virtual void ModifyEnvelopeIndex(const FIndexModifyFunction &pfnFunc) {}
+	virtual void ModifySoundIndex(const FIndexModifyFunction &pfnFunc) {}
 
 	virtual std::shared_ptr<CLayer> Duplicate() const = 0;
 
@@ -61,12 +53,12 @@ public:
 		*pHeight = 0;
 	}
 
-	char m_aName[12];
-	int m_Type;
-	int m_Flags;
+	char m_aName[12] = "(invalid)";
+	int m_Type = LAYERTYPE_INVALID;
+	int m_Flags = 0;
 
-	bool m_Readonly;
-	bool m_Visible;
+	bool m_Readonly = false;
+	bool m_Visible = true;
 };
 
 #endif
