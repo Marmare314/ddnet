@@ -14,6 +14,7 @@
 #include <game/editor/mapitems/layer.h> // TODO: include specific layers instead
 #include <game/editor/mapitems/layer_group.h> // TODO: remove when all mapitems are separate
 #include <game/editor/mapitems/layer_tiles.h> // TODO: remove when all mapitems are separate
+#include <game/editor/mapitems/layer_quads.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -371,36 +372,6 @@ enum
 	PROPTYPE_SHIFT,
 	PROPTYPE_SOUND,
 	PROPTYPE_AUTOMAPPER,
-};
-
-class CLayerQuads : public CLayer
-{
-public:
-	CLayerQuads();
-	CLayerQuads(const CLayerQuads &Other);
-	~CLayerQuads();
-
-	void Render(bool QuadPicker = false) override;
-	CQuad *NewQuad(int x, int y, int Width, int Height);
-	int SwapQuads(int Index0, int Index1);
-
-	void BrushSelecting(CUIRect Rect) override;
-	int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) override;
-	void BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
-	void BrushFlipX() override;
-	void BrushFlipY() override;
-	void BrushRotate(float Amount) override;
-
-	CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) override;
-
-	void ModifyImageIndex(FIndexModifyFunction pfnFunc) override;
-	void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) override;
-
-	void GetSize(float *pWidth, float *pHeight) override;
-	std::shared_ptr<CLayer> Duplicate() const override;
-
-	int m_Image;
-	std::vector<CQuad> m_vQuads;
 };
 
 class CLayerGame : public CLayerTiles
