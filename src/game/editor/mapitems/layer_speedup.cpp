@@ -35,21 +35,21 @@ void CLayerSpeedup::Resize(int NewW, int NewH)
 	CLayerTiles::Resize(NewW, NewH);
 
 	// resize gamelayer too
-	if(m_pEditor->m_Map.m_pGameLayer->m_Width != NewW || m_pEditor->m_Map.m_pGameLayer->m_Height != NewH)
-		m_pEditor->m_Map.m_pGameLayer->Resize(NewW, NewH);
+	if(Editor()->m_Map.m_pGameLayer->m_Width != NewW || Editor()->m_Map.m_pGameLayer->m_Height != NewH)
+		Editor()->m_Map.m_pGameLayer->Resize(NewW, NewH);
 }
 
 void CLayerSpeedup::Shift(int Direction)
 {
 	CLayerTiles::Shift(Direction);
-	ShiftImpl(m_pSpeedupTile, Direction, m_pEditor->m_ShiftBy);
+	ShiftImpl(m_pSpeedupTile, Direction, Editor()->m_ShiftBy);
 }
 
 bool CLayerSpeedup::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 {
 	for(int y = 0; y < pLayer->m_Height; y++)
 		for(int x = 0; x < pLayer->m_Width; x++)
-			if(m_pEditor->m_AllowPlaceUnusedTiles || IsValidSpeedupTile(pLayer->GetTile(x, y).m_Index))
+			if(Editor()->m_AllowPlaceUnusedTiles || IsValidSpeedupTile(pLayer->GetTile(x, y).m_Index))
 				return false;
 
 	return true;
@@ -63,14 +63,14 @@ void CLayerSpeedup::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy
 	std::shared_ptr<CLayerSpeedup> pSpeedupLayer = std::static_pointer_cast<CLayerSpeedup>(pBrush);
 	int sx = ConvertX(wx);
 	int sy = ConvertY(wy);
-	if(str_comp(pSpeedupLayer->m_aFileName, m_pEditor->m_aFileName))
+	if(str_comp(pSpeedupLayer->m_aFileName, Editor()->m_aFileName))
 	{
-		m_pEditor->m_SpeedupAngle = pSpeedupLayer->m_SpeedupAngle;
-		m_pEditor->m_SpeedupForce = pSpeedupLayer->m_SpeedupForce;
-		m_pEditor->m_SpeedupMaxSpeed = pSpeedupLayer->m_SpeedupMaxSpeed;
+		Editor()->m_SpeedupAngle = pSpeedupLayer->m_SpeedupAngle;
+		Editor()->m_SpeedupForce = pSpeedupLayer->m_SpeedupForce;
+		Editor()->m_SpeedupMaxSpeed = pSpeedupLayer->m_SpeedupMaxSpeed;
 	}
 
-	bool Destructive = m_pEditor->m_BrushDrawDestructive || IsEmpty(pSpeedupLayer);
+	bool Destructive = Editor()->m_BrushDrawDestructive || IsEmpty(pSpeedupLayer);
 
 	for(int y = 0; y < pSpeedupLayer->m_Height; y++)
 		for(int x = 0; x < pSpeedupLayer->m_Width; x++)
@@ -84,13 +84,13 @@ void CLayerSpeedup::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy
 			if(!Destructive && GetTile(fx, fy).m_Index)
 				continue;
 
-			if((m_pEditor->m_AllowPlaceUnusedTiles || IsValidSpeedupTile(pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index)) && pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index != TILE_AIR)
+			if((Editor()->m_AllowPlaceUnusedTiles || IsValidSpeedupTile(pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index)) && pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index != TILE_AIR)
 			{
-				if(m_pEditor->m_SpeedupAngle != pSpeedupLayer->m_SpeedupAngle || m_pEditor->m_SpeedupForce != pSpeedupLayer->m_SpeedupForce || m_pEditor->m_SpeedupMaxSpeed != pSpeedupLayer->m_SpeedupMaxSpeed)
+				if(Editor()->m_SpeedupAngle != pSpeedupLayer->m_SpeedupAngle || Editor()->m_SpeedupForce != pSpeedupLayer->m_SpeedupForce || Editor()->m_SpeedupMaxSpeed != pSpeedupLayer->m_SpeedupMaxSpeed)
 				{
-					m_pSpeedupTile[fy * m_Width + fx].m_Force = m_pEditor->m_SpeedupForce;
-					m_pSpeedupTile[fy * m_Width + fx].m_MaxSpeed = m_pEditor->m_SpeedupMaxSpeed;
-					m_pSpeedupTile[fy * m_Width + fx].m_Angle = m_pEditor->m_SpeedupAngle;
+					m_pSpeedupTile[fy * m_Width + fx].m_Force = Editor()->m_SpeedupForce;
+					m_pSpeedupTile[fy * m_Width + fx].m_MaxSpeed = Editor()->m_SpeedupMaxSpeed;
+					m_pSpeedupTile[fy * m_Width + fx].m_Angle = Editor()->m_SpeedupAngle;
 					m_pSpeedupTile[fy * m_Width + fx].m_Type = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 					m_pTiles[fy * m_Width + fx].m_Index = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 				}
@@ -102,11 +102,11 @@ void CLayerSpeedup::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy
 					m_pSpeedupTile[fy * m_Width + fx].m_Type = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 					m_pTiles[fy * m_Width + fx].m_Index = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 				}
-				else if(m_pEditor->m_SpeedupForce)
+				else if(Editor()->m_SpeedupForce)
 				{
-					m_pSpeedupTile[fy * m_Width + fx].m_Force = m_pEditor->m_SpeedupForce;
-					m_pSpeedupTile[fy * m_Width + fx].m_MaxSpeed = m_pEditor->m_SpeedupMaxSpeed;
-					m_pSpeedupTile[fy * m_Width + fx].m_Angle = m_pEditor->m_SpeedupAngle;
+					m_pSpeedupTile[fy * m_Width + fx].m_Force = Editor()->m_SpeedupForce;
+					m_pSpeedupTile[fy * m_Width + fx].m_MaxSpeed = Editor()->m_SpeedupMaxSpeed;
+					m_pSpeedupTile[fy * m_Width + fx].m_Angle = Editor()->m_SpeedupAngle;
 					m_pSpeedupTile[fy * m_Width + fx].m_Type = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 					m_pTiles[fy * m_Width + fx].m_Index = pSpeedupLayer->m_pTiles[y * pSpeedupLayer->m_Width + x].m_Index;
 				}
@@ -193,7 +193,7 @@ void CLayerSpeedup::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CU
 
 	std::shared_ptr<CLayerSpeedup> pLt = std::static_pointer_cast<CLayerSpeedup>(pBrush);
 
-	bool Destructive = m_pEditor->m_BrushDrawDestructive || Empty || IsEmpty(pLt);
+	bool Destructive = Editor()->m_BrushDrawDestructive || Empty || IsEmpty(pLt);
 
 	for(int y = 0; y < h; y++)
 	{
@@ -211,7 +211,7 @@ void CLayerSpeedup::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CU
 			const int SrcIndex = Empty ? 0 : (y * pLt->m_Width + x % pLt->m_Width) % (pLt->m_Width * pLt->m_Height);
 			const int TgtIndex = fy * m_Width + fx;
 
-			if(Empty || (!m_pEditor->m_AllowPlaceUnusedTiles && !IsValidSpeedupTile((pLt->m_pTiles[SrcIndex]).m_Index))) // no speed up tile chosen: reset
+			if(Empty || (!Editor()->m_AllowPlaceUnusedTiles && !IsValidSpeedupTile((pLt->m_pTiles[SrcIndex]).m_Index))) // no speed up tile chosen: reset
 			{
 				m_pTiles[TgtIndex].m_Index = 0;
 				m_pSpeedupTile[TgtIndex].m_Force = 0;
@@ -224,18 +224,18 @@ void CLayerSpeedup::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CU
 				{
 					m_pSpeedupTile[TgtIndex].m_Type = m_pTiles[TgtIndex].m_Index;
 
-					if((pLt->m_pSpeedupTile[SrcIndex].m_Force == 0 && m_pEditor->m_SpeedupForce) || m_pEditor->m_SpeedupForce != pLt->m_SpeedupForce)
-						m_pSpeedupTile[TgtIndex].m_Force = m_pEditor->m_SpeedupForce;
+					if((pLt->m_pSpeedupTile[SrcIndex].m_Force == 0 && Editor()->m_SpeedupForce) || Editor()->m_SpeedupForce != pLt->m_SpeedupForce)
+						m_pSpeedupTile[TgtIndex].m_Force = Editor()->m_SpeedupForce;
 					else
 						m_pSpeedupTile[TgtIndex].m_Force = pLt->m_pSpeedupTile[SrcIndex].m_Force;
 
-					if((pLt->m_pSpeedupTile[SrcIndex].m_Angle == 0 && m_pEditor->m_SpeedupAngle) || m_pEditor->m_SpeedupAngle != pLt->m_SpeedupAngle)
-						m_pSpeedupTile[TgtIndex].m_Angle = m_pEditor->m_SpeedupAngle;
+					if((pLt->m_pSpeedupTile[SrcIndex].m_Angle == 0 && Editor()->m_SpeedupAngle) || Editor()->m_SpeedupAngle != pLt->m_SpeedupAngle)
+						m_pSpeedupTile[TgtIndex].m_Angle = Editor()->m_SpeedupAngle;
 					else
 						m_pSpeedupTile[TgtIndex].m_Angle = pLt->m_pSpeedupTile[SrcIndex].m_Angle;
 
-					if((pLt->m_pSpeedupTile[SrcIndex].m_MaxSpeed == 0 && m_pEditor->m_SpeedupMaxSpeed) || m_pEditor->m_SpeedupMaxSpeed != pLt->m_SpeedupMaxSpeed)
-						m_pSpeedupTile[TgtIndex].m_MaxSpeed = m_pEditor->m_SpeedupMaxSpeed;
+					if((pLt->m_pSpeedupTile[SrcIndex].m_MaxSpeed == 0 && Editor()->m_SpeedupMaxSpeed) || Editor()->m_SpeedupMaxSpeed != pLt->m_SpeedupMaxSpeed)
+						m_pSpeedupTile[TgtIndex].m_MaxSpeed = Editor()->m_SpeedupMaxSpeed;
 					else
 						m_pSpeedupTile[TgtIndex].m_MaxSpeed = pLt->m_pSpeedupTile[SrcIndex].m_MaxSpeed;
 				}

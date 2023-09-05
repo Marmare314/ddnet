@@ -35,21 +35,21 @@ void CLayerTele::Resize(int NewW, int NewH)
 	CLayerTiles::Resize(NewW, NewH);
 
 	// resize gamelayer too
-	if(m_pEditor->m_Map.m_pGameLayer->m_Width != NewW || m_pEditor->m_Map.m_pGameLayer->m_Height != NewH)
-		m_pEditor->m_Map.m_pGameLayer->Resize(NewW, NewH);
+	if(Editor()->m_Map.m_pGameLayer->m_Width != NewW || Editor()->m_Map.m_pGameLayer->m_Height != NewH)
+		Editor()->m_Map.m_pGameLayer->Resize(NewW, NewH);
 }
 
 void CLayerTele::Shift(int Direction)
 {
 	CLayerTiles::Shift(Direction);
-	ShiftImpl(m_pTeleTile, Direction, m_pEditor->m_ShiftBy);
+	ShiftImpl(m_pTeleTile, Direction, Editor()->m_ShiftBy);
 }
 
 bool CLayerTele::IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer)
 {
 	for(int y = 0; y < pLayer->m_Height; y++)
 		for(int x = 0; x < pLayer->m_Width; x++)
-			if(m_pEditor->m_AllowPlaceUnusedTiles || IsValidTeleTile(pLayer->GetTile(x, y).m_Index))
+			if(Editor()->m_AllowPlaceUnusedTiles || IsValidTeleTile(pLayer->GetTile(x, y).m_Index))
 				return false;
 
 	return true;
@@ -63,10 +63,10 @@ void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
 	std::shared_ptr<CLayerTele> pTeleLayer = std::static_pointer_cast<CLayerTele>(pBrush);
 	int sx = ConvertX(wx);
 	int sy = ConvertY(wy);
-	if(str_comp(pTeleLayer->m_aFileName, m_pEditor->m_aFileName))
-		m_pEditor->m_TeleNumber = pTeleLayer->m_TeleNum;
+	if(str_comp(pTeleLayer->m_aFileName, Editor()->m_aFileName))
+		Editor()->m_TeleNumber = pTeleLayer->m_TeleNum;
 
-	bool Destructive = m_pEditor->m_BrushDrawDestructive || IsEmpty(pTeleLayer);
+	bool Destructive = Editor()->m_BrushDrawDestructive || IsEmpty(pTeleLayer);
 
 	for(int y = 0; y < pTeleLayer->m_Height; y++)
 		for(int x = 0; x < pTeleLayer->m_Width; x++)
@@ -80,7 +80,7 @@ void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
 			if(!Destructive && GetTile(fx, fy).m_Index)
 				continue;
 
-			if((m_pEditor->m_AllowPlaceUnusedTiles || IsValidTeleTile(pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index)) && pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index != TILE_AIR)
+			if((Editor()->m_AllowPlaceUnusedTiles || IsValidTeleTile(pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index)) && pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index != TILE_AIR)
 			{
 				if(!IsTeleTileNumberUsed(pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index))
 				{
@@ -88,9 +88,9 @@ void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
 					// as tiles with number 0 would be ignored by previous versions.
 					m_pTeleTile[fy * m_Width + fx].m_Number = 255;
 				}
-				else if(m_pEditor->m_TeleNumber != pTeleLayer->m_TeleNum)
+				else if(Editor()->m_TeleNumber != pTeleLayer->m_TeleNum)
 				{
-					m_pTeleTile[fy * m_Width + fx].m_Number = m_pEditor->m_TeleNumber;
+					m_pTeleTile[fy * m_Width + fx].m_Number = Editor()->m_TeleNumber;
 				}
 				else if(pTeleLayer->m_pTeleTile[y * pTeleLayer->m_Width + x].m_Number)
 				{
@@ -98,7 +98,7 @@ void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
 				}
 				else
 				{
-					if(!m_pEditor->m_TeleNumber)
+					if(!Editor()->m_TeleNumber)
 					{
 						m_pTeleTile[fy * m_Width + fx].m_Number = 0;
 						m_pTeleTile[fy * m_Width + fx].m_Type = 0;
@@ -106,7 +106,7 @@ void CLayerTele::BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy)
 						continue;
 					}
 					else
-						m_pTeleTile[fy * m_Width + fx].m_Number = m_pEditor->m_TeleNumber;
+						m_pTeleTile[fy * m_Width + fx].m_Number = Editor()->m_TeleNumber;
 				}
 
 				m_pTeleTile[fy * m_Width + fx].m_Type = pTeleLayer->m_pTiles[y * pTeleLayer->m_Width + x].m_Index;
@@ -184,7 +184,7 @@ void CLayerTele::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRe
 
 	std::shared_ptr<CLayerTele> pLt = std::static_pointer_cast<CLayerTele>(pBrush);
 
-	bool Destructive = m_pEditor->m_BrushDrawDestructive || Empty || IsEmpty(pLt);
+	bool Destructive = Editor()->m_BrushDrawDestructive || Empty || IsEmpty(pLt);
 
 	for(int y = 0; y < h; y++)
 	{
@@ -202,7 +202,7 @@ void CLayerTele::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRe
 			const int SrcIndex = Empty ? 0 : (y * pLt->m_Width + x % pLt->m_Width) % (pLt->m_Width * pLt->m_Height);
 			const int TgtIndex = fy * m_Width + fx;
 
-			if(Empty || (!m_pEditor->m_AllowPlaceUnusedTiles && !IsValidTeleTile((pLt->m_pTiles[SrcIndex]).m_Index)))
+			if(Empty || (!Editor()->m_AllowPlaceUnusedTiles && !IsValidTeleTile((pLt->m_pTiles[SrcIndex]).m_Index)))
 			{
 				m_pTiles[TgtIndex].m_Index = 0;
 				m_pTeleTile[TgtIndex].m_Type = 0;
@@ -221,8 +221,8 @@ void CLayerTele::FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRe
 						// as tiles with number 0 would be ignored by previous versions.
 						m_pTeleTile[TgtIndex].m_Number = 255;
 					}
-					else if((pLt->m_pTeleTile[SrcIndex].m_Number == 0 && m_pEditor->m_TeleNumber) || m_pEditor->m_TeleNumber != pLt->m_TeleNum)
-						m_pTeleTile[TgtIndex].m_Number = m_pEditor->m_TeleNumber;
+					else if((pLt->m_pTeleTile[SrcIndex].m_Number == 0 && Editor()->m_TeleNumber) || Editor()->m_TeleNumber != pLt->m_TeleNum)
+						m_pTeleTile[TgtIndex].m_Number = Editor()->m_TeleNumber;
 					else
 						m_pTeleTile[TgtIndex].m_Number = pLt->m_pTeleTile[SrcIndex].m_Number;
 				}

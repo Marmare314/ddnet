@@ -12,14 +12,14 @@ void CLayerFront::SetTile(int x, int y, CTile Tile)
 	if(Tile.m_Index == TILE_THROUGH_CUT)
 	{
 		CTile nohook = {TILE_NOHOOK};
-		m_pEditor->m_Map.m_pGameLayer->CLayerTiles::SetTile(x, y, nohook); // NOLINT(bugprone-parent-virtual-call)
+		Editor()->m_Map.m_pGameLayer->CLayerTiles::SetTile(x, y, nohook); // NOLINT(bugprone-parent-virtual-call)
 	}
 	else if(Tile.m_Index == TILE_AIR && CLayerTiles::GetTile(x, y).m_Index == TILE_THROUGH_CUT)
 	{
 		CTile air = {TILE_AIR};
-		m_pEditor->m_Map.m_pGameLayer->CLayerTiles::SetTile(x, y, air); // NOLINT(bugprone-parent-virtual-call)
+		Editor()->m_Map.m_pGameLayer->CLayerTiles::SetTile(x, y, air); // NOLINT(bugprone-parent-virtual-call)
 	}
-	if(m_pEditor->m_AllowPlaceUnusedTiles || IsValidFrontTile(Tile.m_Index))
+	if(Editor()->m_AllowPlaceUnusedTiles || IsValidFrontTile(Tile.m_Index))
 	{
 		CLayerTiles::SetTile(x, y, Tile);
 	}
@@ -27,11 +27,11 @@ void CLayerFront::SetTile(int x, int y, CTile Tile)
 	{
 		CTile air = {TILE_AIR};
 		CLayerTiles::SetTile(x, y, air);
-		if(!m_pEditor->m_PreventUnusedTilesWasWarned)
+		if(!Editor()->m_PreventUnusedTilesWasWarned)
 		{
-			m_pEditor->m_PopupEventType = CEditor::POPEVENT_PREVENTUNUSEDTILES;
-			m_pEditor->m_PopupEventActivated = true;
-			m_pEditor->m_PreventUnusedTilesWasWarned = true;
+			Editor()->m_PopupEventType = CEditor::POPEVENT_PREVENTUNUSEDTILES;
+			Editor()->m_PopupEventActivated = true;
+			Editor()->m_PreventUnusedTilesWasWarned = true;
 		}
 	}
 }
@@ -42,6 +42,6 @@ void CLayerFront::Resize(int NewW, int NewH)
 	CLayerTiles::Resize(NewW, NewH);
 
 	// resize gamelayer too
-	if(m_pEditor->m_Map.m_pGameLayer->m_Width != NewW || m_pEditor->m_Map.m_pGameLayer->m_Height != NewH)
-		m_pEditor->m_Map.m_pGameLayer->Resize(NewW, NewH);
+	if(Editor()->m_Map.m_pGameLayer->m_Width != NewW || Editor()->m_Map.m_pGameLayer->m_Height != NewH)
+		Editor()->m_Map.m_pGameLayer->Resize(NewW, NewH);
 }

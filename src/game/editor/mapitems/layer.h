@@ -1,24 +1,17 @@
 #ifndef GAME_EDITOR_MAPITEMS_LAYER_H
 #define GAME_EDITOR_MAPITEMS_LAYER_H
 
-#include <base/system.h>
-#include <game/client/ui.h>
-#include <game/client/ui_rect.h>
-#include <game/mapitems.h>
+#include <game/editor/component.h>
 
-#include <memory>
+#include <game/mapitems.h>
 
 using FIndexModifyFunction = std::function<void(int *pIndex)>;
 
 class CLayerGroup;
 
-class CLayer
+class CLayer : public CEditorComponent
 {
 public:
-	class CEditor *m_pEditor;
-	class IGraphics *Graphics();
-	class ITextRender *TextRender();
-
 	explicit CLayer(CEditor *pEditor)
 	{
 		m_Type = LAYERTYPE_INVALID;
@@ -26,14 +19,13 @@ public:
 		m_Visible = true;
 		m_Readonly = false;
 		m_Flags = 0;
-		m_pEditor = pEditor;
+		Init(pEditor);
 	}
 
-	CLayer(const CLayer &Other)
+	CLayer(const CLayer &Other) : CEditorComponent(Other)
 	{
 		str_copy(m_aName, Other.m_aName);
 		m_Flags = Other.m_Flags;
-		m_pEditor = Other.m_pEditor;
 		m_Type = Other.m_Type;
 		m_Visible = true;
 		m_Readonly = false;

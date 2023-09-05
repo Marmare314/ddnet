@@ -685,7 +685,6 @@ bool CEditorMap::Load(const char *pFileName, int StorageType, const std::functio
 						else
 						{
 							pTiles = std::make_shared<CLayerTiles>(m_pEditor, pTilemapItem->m_Width, pTilemapItem->m_Height);
-							pTiles->m_pEditor = m_pEditor;
 							pTiles->m_Color = pTilemapItem->m_Color;
 							pTiles->m_ColorEnv = pTilemapItem->m_ColorEnv;
 							pTiles->m_ColorEnvOffset = pTilemapItem->m_ColorEnvOffset;

@@ -39,7 +39,7 @@ void CLayerSounds::Render(bool Tileset)
 		if(Source.m_PosEnv >= 0)
 		{
 			ColorRGBA Channels;
-			m_pEditor->EnvelopeEval(Source.m_PosEnvOffset, Source.m_PosEnv, Channels, m_pEditor);
+			Editor()->EnvelopeEval(Source.m_PosEnvOffset, Source.m_PosEnv, Channels, Editor());
 			OffsetX = Channels.r;
 			OffsetY = Channels.g;
 		}
@@ -48,12 +48,12 @@ void CLayerSounds::Render(bool Tileset)
 		{
 		case CSoundShape::SHAPE_CIRCLE:
 		{
-			m_pEditor->Graphics()->DrawCircle(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY,
+			Graphics()->DrawCircle(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY,
 				Source.m_Shape.m_Circle.m_Radius, 32);
 
 			float Falloff = ((float)Source.m_Falloff / 255.0f);
 			if(Falloff > 0.0f)
-				m_pEditor->Graphics()->DrawCircle(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY,
+				Graphics()->DrawCircle(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY,
 					Source.m_Shape.m_Circle.m_Radius * Falloff, 32);
 			break;
 		}
@@ -61,12 +61,12 @@ void CLayerSounds::Render(bool Tileset)
 		{
 			float Width = fx2f(Source.m_Shape.m_Rectangle.m_Width);
 			float Height = fx2f(Source.m_Shape.m_Rectangle.m_Height);
-			m_pEditor->Graphics()->DrawRectExt(fx2f(Source.m_Position.x) + OffsetX - Width / 2, fx2f(Source.m_Position.y) + OffsetY - Height / 2,
+			Graphics()->DrawRectExt(fx2f(Source.m_Position.x) + OffsetX - Width / 2, fx2f(Source.m_Position.y) + OffsetY - Height / 2,
 				Width, Height, 0.0f, IGraphics::CORNER_NONE);
 
 			float Falloff = ((float)Source.m_Falloff / 255.0f);
 			if(Falloff > 0.0f)
-				m_pEditor->Graphics()->DrawRectExt(fx2f(Source.m_Position.x) + OffsetX - Falloff * Width / 2, fx2f(Source.m_Position.y) + OffsetY - Falloff * Height / 2,
+				Graphics()->DrawRectExt(fx2f(Source.m_Position.x) + OffsetX - Falloff * Width / 2, fx2f(Source.m_Position.y) + OffsetY - Falloff * Height / 2,
 					Width * Falloff, Height * Falloff, 0.0f, IGraphics::CORNER_NONE);
 			break;
 		}
@@ -80,7 +80,7 @@ void CLayerSounds::Render(bool Tileset)
 	Graphics()->QuadsBegin();
 
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pEditor->RenderTools()->SelectSprite(SPRITE_AUDIO_SOURCE);
+	RenderTools()->SelectSprite(SPRITE_AUDIO_SOURCE);
 	for(const auto &Source : m_vSources)
 	{
 		float OffsetX = 0;
@@ -89,12 +89,12 @@ void CLayerSounds::Render(bool Tileset)
 		if(Source.m_PosEnv >= 0)
 		{
 			ColorRGBA Channels;
-			m_pEditor->EnvelopeEval(Source.m_PosEnvOffset, Source.m_PosEnv, Channels, m_pEditor);
+			Editor()->EnvelopeEval(Source.m_PosEnvOffset, Source.m_PosEnv, Channels, Editor());
 			OffsetX = Channels.r;
 			OffsetY = Channels.g;
 		}
 
-		m_pEditor->RenderTools()->DrawSprite(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY, m_pEditor->MapView()->ScaleLength(s_SourceVisualSize));
+		RenderTools()->DrawSprite(fx2f(Source.m_Position.x) + OffsetX, fx2f(Source.m_Position.y) + OffsetY, Editor()->MapView()->ScaleLength(s_SourceVisualSize));
 	}
 
 	Graphics()->QuadsEnd();
@@ -102,7 +102,7 @@ void CLayerSounds::Render(bool Tileset)
 
 CSoundSource *CLayerSounds::NewSource(int x, int y)
 {
-	m_pEditor->m_Map.OnModify();
+	Editor()->m_Map.OnModify();
 
 	m_vSources.emplace_back();
 	CSoundSource *pSource = &m_vSources[m_vSources.size() - 1];
@@ -144,7 +144,7 @@ void CLayerSounds::BrushSelecting(CUIRect Rect)
 int CLayerSounds::BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect)
 {
 	// create new layer
-	std::shared_ptr<CLayerSounds> pGrabbed = std::make_shared<CLayerSounds>(m_pEditor);
+	std::shared_ptr<CLayerSounds> pGrabbed = std::make_shared<CLayerSounds>(Editor());
 	pGrabbed->m_Sound = m_Sound;
 	pBrush->AddLayer(pGrabbed);
 
@@ -179,7 +179,7 @@ void CLayerSounds::BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy
 
 		m_vSources.push_back(n);
 	}
-	m_pEditor->m_Map.OnModify();
+	Editor()->m_Map.OnModify();
 }
 
 CUI::EPopupMenuFunctionResult CLayerSounds::RenderProperties(CUIRect *pToolBox)
@@ -197,16 +197,16 @@ CUI::EPopupMenuFunctionResult CLayerSounds::RenderProperties(CUIRect *pToolBox)
 
 	static int s_aIds[NUM_PROPS] = {0};
 	int NewVal = 0;
-	int Prop = m_pEditor->DoProperties(pToolBox, aProps, s_aIds, &NewVal);
+	int Prop = Editor()->DoProperties(pToolBox, aProps, s_aIds, &NewVal);
 	if(Prop != -1)
 	{
-		m_pEditor->m_Map.OnModify();
+		Editor()->m_Map.OnModify();
 	}
 
 	if(Prop == PROP_SOUND)
 	{
 		if(NewVal >= 0)
-			m_Sound = NewVal % m_pEditor->m_Map.m_vpSounds.size();
+			m_Sound = NewVal % Editor()->m_Map.m_vpSounds.size();
 		else
 			m_Sound = -1;
 	}

@@ -1130,8 +1130,4 @@ public:
 	unsigned char m_SwitchDelay;
 };
 
-// make sure to inline this function
-inline class IGraphics *CLayer::Graphics() { return m_pEditor->Graphics(); }
-inline class ITextRender *CLayer::TextRender() { return m_pEditor->TextRender(); }
-
 #endif

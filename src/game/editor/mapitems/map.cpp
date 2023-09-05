@@ -84,7 +84,6 @@ void CEditorMap::VisitEnvelopeReferences(F &&Visitor)
 void CEditorMap::MakeGameLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pGameLayer = std::static_pointer_cast<CLayerGame>(pLayer);
-	m_pGameLayer->m_pEditor = m_pEditor;
 }
 
 void CEditorMap::MakeGameGroup(std::shared_ptr<CLayerGroup> pGroup)
@@ -152,29 +151,24 @@ void CEditorMap::CreateDefault(IGraphics::CTextureHandle EntitiesTexture)
 void CEditorMap::MakeTeleLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pTeleLayer = std::static_pointer_cast<CLayerTele>(pLayer);
-	m_pTeleLayer->m_pEditor = m_pEditor;
 }
 
 void CEditorMap::MakeSpeedupLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pSpeedupLayer = std::static_pointer_cast<CLayerSpeedup>(pLayer);
-	m_pSpeedupLayer->m_pEditor = m_pEditor;
 }
 
 void CEditorMap::MakeFrontLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pFrontLayer = std::static_pointer_cast<CLayerFront>(pLayer);
-	m_pFrontLayer->m_pEditor = m_pEditor;
 }
 
 void CEditorMap::MakeSwitchLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pSwitchLayer = std::static_pointer_cast<CLayerSwitch>(pLayer);
-	m_pSwitchLayer->m_pEditor = m_pEditor;
 }
 
 void CEditorMap::MakeTuneLayer(const std::shared_ptr<CLayer> &pLayer)
 {
 	m_pTuneLayer = std::static_pointer_cast<CLayerTune>(pLayer);
-	m_pTuneLayer->m_pEditor = m_pEditor;
 }
