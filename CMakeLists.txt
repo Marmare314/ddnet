@@ -2327,6 +2327,7 @@ if(CLIENT)
     mapitems/layer_switch.cpp
     mapitems/layer_tele.cpp
     mapitems/layer_tiles.cpp
+    mapitems/layer_tiles.h
     mapitems/layer_tune.cpp
     mapitems/layer.h
     mapitems/map.cpp
