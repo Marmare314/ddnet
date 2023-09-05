@@ -2326,6 +2326,7 @@ if(CLIENT)
     mapitems/layer_quads.cpp
     mapitems/layer_quads.h
     mapitems/layer_sounds.cpp
+    mapitems/layer_sounds.h
     mapitems/layer_speedup.cpp
     mapitems/layer_speedup.h
     mapitems/layer_switch.cpp

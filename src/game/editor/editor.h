@@ -21,6 +21,7 @@
 #include <game/editor/mapitems/layer_front.h>
 #include <game/editor/mapitems/layer_switch.h>
 #include <game/editor/mapitems/layer_tune.h>
+#include <game/editor/mapitems/layer_sounds.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -1132,32 +1133,5 @@ public:
 // make sure to inline this function
 inline class IGraphics *CLayer::Graphics() { return m_pEditor->Graphics(); }
 inline class ITextRender *CLayer::TextRender() { return m_pEditor->TextRender(); }
-
-// DDRace
-
-class CLayerSounds : public CLayer
-{
-public:
-	CLayerSounds();
-	CLayerSounds(const CLayerSounds &Other);
-	~CLayerSounds();
-
-	void Render(bool Tileset = false) override;
-	CSoundSource *NewSource(int x, int y);
-
-	void BrushSelecting(CUIRect Rect) override;
-	int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) override;
-	void BrushPlace(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
-
-	CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) override;
-
-	void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) override;
-	void ModifySoundIndex(FIndexModifyFunction pfnFunc) override;
-
-	std::shared_ptr<CLayer> Duplicate() const override;
-
-	int m_Sound;
-	std::vector<CSoundSource> m_vSources;
-};
 
 #endif
