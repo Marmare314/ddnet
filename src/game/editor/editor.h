@@ -12,6 +12,7 @@
 #include <game/mapitems_ex.h>
 
 #include <game/editor/mapitems/layer.h> // TODO: include specific layers instead
+#include <game/editor/mapitems/layer_group.h> // TODO: remove when all mapitems are separate
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -184,83 +185,6 @@ public:
 	void SetChannels(int Channels)
 	{
 		m_Channels = clamp<int>(Channels, 1, CEnvPoint::MAX_CHANNELS);
-	}
-};
-
-class CLayerGroup
-{
-public:
-	class CEditorMap *m_pMap;
-
-	std::vector<std::shared_ptr<CLayer>> m_vpLayers;
-
-	int m_OffsetX;
-	int m_OffsetY;
-
-	int m_ParallaxX;
-	int m_ParallaxY;
-	int m_CustomParallaxZoom;
-	int m_ParallaxZoom;
-
-	int m_UseClipping;
-	int m_ClipX;
-	int m_ClipY;
-	int m_ClipW;
-	int m_ClipH;
-
-	char m_aName[12];
-	bool m_GameGroup;
-	bool m_Visible;
-	bool m_Collapse;
-
-	CLayerGroup();
-	~CLayerGroup();
-
-	void Convert(CUIRect *pRect);
-	void Render();
-	void MapScreen();
-	void Mapping(float *pPoints);
-
-	void GetSize(float *pWidth, float *pHeight) const;
-
-	void DeleteLayer(int Index);
-	void DuplicateLayer(int Index);
-	int SwapLayers(int Index0, int Index1);
-
-	bool IsEmpty() const
-	{
-		return m_vpLayers.empty();
-	}
-
-	void OnEdited()
-	{
-		if(!m_CustomParallaxZoom)
-			m_ParallaxZoom = GetParallaxZoomDefault(m_ParallaxX, m_ParallaxY);
-	}
-
-	void Clear()
-	{
-		m_vpLayers.clear();
-	}
-
-	void AddLayer(const std::shared_ptr<CLayer> &pLayer);
-
-	void ModifyImageIndex(FIndexModifyFunction Func)
-	{
-		for(auto &pLayer : m_vpLayers)
-			pLayer->ModifyImageIndex(Func);
-	}
-
-	void ModifyEnvelopeIndex(FIndexModifyFunction Func)
-	{
-		for(auto &pLayer : m_vpLayers)
-			pLayer->ModifyEnvelopeIndex(Func);
-	}
-
-	void ModifySoundIndex(FIndexModifyFunction Func)
-	{
-		for(auto &pLayer : m_vpLayers)
-			pLayer->ModifySoundIndex(Func);
 	}
 };
 
