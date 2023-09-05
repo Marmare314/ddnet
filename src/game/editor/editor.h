@@ -18,6 +18,7 @@
 #include <game/editor/mapitems/layer_game.h>
 #include <game/editor/mapitems/layer_tele.h>
 #include <game/editor/mapitems/layer_speedup.h>
+#include <game/editor/mapitems/layer_front.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -1131,15 +1132,6 @@ inline class IGraphics *CLayer::Graphics() { return m_pEditor->Graphics(); }
 inline class ITextRender *CLayer::TextRender() { return m_pEditor->TextRender(); }
 
 // DDRace
-
-class CLayerFront : public CLayerTiles
-{
-public:
-	CLayerFront(int w, int h);
-
-	void Resize(int NewW, int NewH) override;
-	void SetTile(int x, int y, CTile Tile) override;
-};
 
 class CLayerSwitch : public CLayerTiles
 {
