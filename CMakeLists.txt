@@ -2335,6 +2335,7 @@ if(CLIENT)
     mapitems/layer_tiles.cpp
     mapitems/layer_tiles.h
     mapitems/layer_tune.cpp
+    mapitems/layer_tune.h
     mapitems/layer.h
     mapitems/map.cpp
     mapitems/map_io.cpp

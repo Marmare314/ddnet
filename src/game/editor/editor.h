@@ -20,6 +20,7 @@
 #include <game/editor/mapitems/layer_speedup.h>
 #include <game/editor/mapitems/layer_front.h>
 #include <game/editor/mapitems/layer_switch.h>
+#include <game/editor/mapitems/layer_tune.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -1133,25 +1134,6 @@ inline class IGraphics *CLayer::Graphics() { return m_pEditor->Graphics(); }
 inline class ITextRender *CLayer::TextRender() { return m_pEditor->TextRender(); }
 
 // DDRace
-
-class CLayerTune : public CLayerTiles
-{
-public:
-	CLayerTune(int w, int h);
-	~CLayerTune();
-
-	CTuneTile *m_pTuneTile;
-	unsigned char m_TuningNumber;
-
-	void Resize(int NewW, int NewH) override;
-	void Shift(int Direction) override;
-	bool IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer) override;
-	void BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
-	void BrushFlipX() override;
-	void BrushFlipY() override;
-	void BrushRotate(float Amount) override;
-	void FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect) override;
-};
 
 class CLayerSounds : public CLayer
 {
