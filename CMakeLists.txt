@@ -2329,6 +2329,7 @@ if(CLIENT)
     mapitems/layer_speedup.cpp
     mapitems/layer_speedup.h
     mapitems/layer_switch.cpp
+    mapitems/layer_switch.h
     mapitems/layer_tele.cpp
     mapitems/layer_tele.h
     mapitems/layer_tiles.cpp

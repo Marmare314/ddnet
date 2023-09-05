@@ -19,6 +19,7 @@
 #include <game/editor/mapitems/layer_tele.h>
 #include <game/editor/mapitems/layer_speedup.h>
 #include <game/editor/mapitems/layer_front.h>
+#include <game/editor/mapitems/layer_switch.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -1132,27 +1133,6 @@ inline class IGraphics *CLayer::Graphics() { return m_pEditor->Graphics(); }
 inline class ITextRender *CLayer::TextRender() { return m_pEditor->TextRender(); }
 
 // DDRace
-
-class CLayerSwitch : public CLayerTiles
-{
-public:
-	CLayerSwitch(int w, int h);
-	~CLayerSwitch();
-
-	CSwitchTile *m_pSwitchTile;
-	unsigned char m_SwitchNumber;
-	unsigned char m_SwitchDelay;
-
-	void Resize(int NewW, int NewH) override;
-	void Shift(int Direction) override;
-	bool IsEmpty(const std::shared_ptr<CLayerTiles> &pLayer) override;
-	void BrushDraw(std::shared_ptr<CLayer> pBrush, float wx, float wy) override;
-	void BrushFlipX() override;
-	void BrushFlipY() override;
-	void BrushRotate(float Amount) override;
-	void FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect) override;
-	virtual bool ContainsElementWithId(int Id);
-};
 
 class CLayerTune : public CLayerTiles
 {
