@@ -1600,8 +1600,7 @@ void CEditor::DoQuad(CQuad *pQuad, int Index)
 	{
 		std::shared_ptr<CLayerQuads> pLayer = std::static_pointer_cast<CLayerQuads>(GetSelectedLayerType(0, LAYERTYPE_QUADS));
 
-		std::shared_ptr<CLayerQuads> pLayerQuads = std::make_shared<CLayerQuads>();
-		pLayerQuads->m_pEditor = pLayer->m_pEditor;
+		std::shared_ptr<CLayerQuads> pLayerQuads = std::make_shared<CLayerQuads>(this);
 		pLayerQuads->m_Image = pLayer->m_Image;
 
 		int MinX = m_vCopyBuffer.front().m_aPoints[4].x;
@@ -7510,13 +7509,11 @@ void CEditor::Init()
 	m_BackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 	m_CursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 
-	m_pTilesetPicker = std::make_shared<CLayerTiles>(16, 16);
-	m_pTilesetPicker->m_pEditor = this;
+	m_pTilesetPicker = std::make_shared<CLayerTiles>(this, 16, 16);
 	m_pTilesetPicker->MakePalette();
 	m_pTilesetPicker->m_Readonly = true;
 
-	m_pQuadsetPicker = std::make_shared<CLayerQuads>();
-	m_pQuadsetPicker->m_pEditor = this;
+	m_pQuadsetPicker = std::make_shared<CLayerQuads>(this);
 	m_pQuadsetPicker->NewQuad(0, 0, 64, 64);
 	m_pQuadsetPicker->m_Readonly = true;
 
