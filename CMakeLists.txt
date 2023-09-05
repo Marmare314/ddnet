@@ -2319,6 +2319,7 @@ if(CLIENT)
     mapitems/image.h
     mapitems/layer_front.cpp
     mapitems/layer_game.cpp
+    mapitems/layer_game.h
     mapitems/layer_group.cpp
     mapitems/layer_group.h
     mapitems/layer_quads.cpp

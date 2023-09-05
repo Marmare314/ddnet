@@ -15,6 +15,7 @@
 #include <game/editor/mapitems/layer_group.h> // TODO: remove when all mapitems are separate
 #include <game/editor/mapitems/layer_tiles.h> // TODO: remove when all mapitems are separate
 #include <game/editor/mapitems/layer_quads.h>
+#include <game/editor/mapitems/layer_game.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>
@@ -372,18 +373,6 @@ enum
 	PROPTYPE_SHIFT,
 	PROPTYPE_SOUND,
 	PROPTYPE_AUTOMAPPER,
-};
-
-class CLayerGame : public CLayerTiles
-{
-public:
-	CLayerGame(int w, int h);
-	~CLayerGame();
-
-	CTile GetTile(int x, int y) override;
-	void SetTile(int x, int y, CTile Tile) override;
-
-	CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) override;
 };
 
 class CDataFileWriterFinishJob : public IJob
