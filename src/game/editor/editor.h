@@ -11,6 +11,8 @@
 #include <game/mapitems.h>
 #include <game/mapitems_ex.h>
 
+#include <game/editor/mapitems/layer.h> // TODO: include specific layers instead
+
 #include <engine/editor.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
@@ -183,73 +185,6 @@ public:
 	{
 		m_Channels = clamp<int>(Channels, 1, CEnvPoint::MAX_CHANNELS);
 	}
-};
-
-class CLayerGroup;
-
-class CLayer
-{
-public:
-	class CEditor *m_pEditor;
-	class IGraphics *Graphics();
-	class ITextRender *TextRender();
-
-	CLayer()
-	{
-		m_Type = LAYERTYPE_INVALID;
-		str_copy(m_aName, "(invalid)");
-		m_Visible = true;
-		m_Readonly = false;
-		m_Flags = 0;
-		m_pEditor = nullptr;
-	}
-
-	CLayer(const CLayer &Other)
-	{
-		str_copy(m_aName, Other.m_aName);
-		m_Flags = Other.m_Flags;
-		m_pEditor = Other.m_pEditor;
-		m_Type = Other.m_Type;
-		m_Visible = true;
-		m_Readonly = false;
-	}
-
-	virtual ~CLayer()
-	{
-	}
-
-	virtual void BrushSelecting(CUIRect Rect) {}
-	virtual int BrushGrab(std::shared_ptr<CLayerGroup> pBrush, CUIRect Rect) { return 0; }
-	virtual void FillSelection(bool Empty, std::shared_ptr<CLayer> pBrush, CUIRect Rect) {}
-	virtual void BrushDraw(std::shared_ptr<CLayer> pBrush, float x, float y) {}
-	virtual void BrushPlace(std::shared_ptr<CLayer> pBrush, float x, float y) {}
-	virtual void BrushFlipX() {}
-	virtual void BrushFlipY() {}
-	virtual void BrushRotate(float Amount) {}
-
-	virtual bool IsEntitiesLayer() const { return false; }
-
-	virtual void Render(bool Tileset = false) {}
-	virtual CUI::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) { return CUI::POPUP_KEEP_OPEN; }
-
-	virtual void ModifyImageIndex(FIndexModifyFunction pfnFunc) {}
-	virtual void ModifyEnvelopeIndex(FIndexModifyFunction pfnFunc) {}
-	virtual void ModifySoundIndex(FIndexModifyFunction pfnFunc) {}
-
-	virtual std::shared_ptr<CLayer> Duplicate() const = 0;
-
-	virtual void GetSize(float *pWidth, float *pHeight)
-	{
-		*pWidth = 0;
-		*pHeight = 0;
-	}
-
-	char m_aName[12];
-	int m_Type;
-	int m_Flags;
-
-	bool m_Readonly;
-	bool m_Visible;
 };
 
 class CLayerGroup
