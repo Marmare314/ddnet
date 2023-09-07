@@ -9,7 +9,8 @@
 
 #include "image.h"
 
-CLayerTiles::CLayerTiles(CEditor *pEditor, int w, int h) : CLayer(pEditor)
+CLayerTiles::CLayerTiles(CEditor *pEditor, int w, int h) :
+	CLayer(pEditor)
 {
 	m_Type = LAYERTYPE_TILES;
 	m_aName[0] = '\0';

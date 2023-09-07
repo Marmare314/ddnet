@@ -6,7 +6,8 @@
 
 #include "image.h"
 
-CLayerQuads::CLayerQuads(CEditor *pEditor) : CLayer(pEditor)
+CLayerQuads::CLayerQuads(CEditor *pEditor) :
+	CLayer(pEditor)
 {
 	m_Type = LAYERTYPE_QUADS;
 	m_aName[0] = '\0';

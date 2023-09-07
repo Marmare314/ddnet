@@ -12,16 +12,16 @@
 #include <game/mapitems_ex.h>
 
 #include <game/editor/mapitems/layer.h> // TODO: include specific layers instead
-#include <game/editor/mapitems/layer_group.h> // TODO: remove when all mapitems are separate
-#include <game/editor/mapitems/layer_tiles.h> // TODO: remove when all mapitems are separate
-#include <game/editor/mapitems/layer_quads.h>
-#include <game/editor/mapitems/layer_game.h>
-#include <game/editor/mapitems/layer_tele.h>
-#include <game/editor/mapitems/layer_speedup.h>
 #include <game/editor/mapitems/layer_front.h>
-#include <game/editor/mapitems/layer_switch.h>
-#include <game/editor/mapitems/layer_tune.h>
+#include <game/editor/mapitems/layer_game.h>
+#include <game/editor/mapitems/layer_group.h> // TODO: remove when all mapitems are separate
+#include <game/editor/mapitems/layer_quads.h>
 #include <game/editor/mapitems/layer_sounds.h>
+#include <game/editor/mapitems/layer_speedup.h>
+#include <game/editor/mapitems/layer_switch.h>
+#include <game/editor/mapitems/layer_tele.h>
+#include <game/editor/mapitems/layer_tiles.h> // TODO: remove when all mapitems are separate
+#include <game/editor/mapitems/layer_tune.h>
 
 #include <engine/editor.h>
 #include <engine/engine.h>

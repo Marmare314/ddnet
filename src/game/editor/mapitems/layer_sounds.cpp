@@ -6,7 +6,8 @@
 
 static const float s_SourceVisualSize = 32.0f;
 
-CLayerSounds::CLayerSounds(CEditor *pEditor) : CLayer(pEditor)
+CLayerSounds::CLayerSounds(CEditor *pEditor) :
+	CLayer(pEditor)
 {
 	m_Type = LAYERTYPE_SOUNDS;
 	m_aName[0] = '\0';
