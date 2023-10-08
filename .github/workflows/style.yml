@@ -14,24 +14,11 @@ jobs:
     env:
       CARGO_HTTP_MULTIPLEXING: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        submodules: true
-    - name: Prepare
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install clang-format imagemagick ddnet-tools shellcheck pkg-config cmake ninja-build libfreetype6-dev libnotify-dev libsdl2-dev libsqlite3-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev python3-clang libvulkan-dev glslang-tools spirv-tools -y
-        rustup default stable
-        pip3 install pylint
-        git clone https://gitlab.com/Patiga/twmap.git/
-        cd twmap/twmap-tools
-        cargo install --locked --path=.
-        cd ../..
-        rm -rf twmap
-        mkdir release
-        cd release
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DDOWNLOAD_GTEST=OFF -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
-        cmake --build . --config Release --target dilate
+        packages: clang-format ddnet-tools shellcheck pylint
+        version: 1.0
     - name: Check clang-format
       run: clang-format -version
     - name: Check fix_style
@@ -41,7 +28,7 @@ jobs:
     - name: Check languages
       run: scripts/languages/update_all.py
     - name: Check dilated images
-      run: scripts/check_dilate.sh release data
+      run: scripts/check_dilate.sh data
     - name: Check absolute includes
       run: "! grep --exclude-dir rust-bridge -rE '^#include \"(antibot|base|engine|game|steam|test)/' src/"
     - name: Check standard header includes
