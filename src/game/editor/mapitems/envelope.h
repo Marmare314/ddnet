@@ -4,7 +4,9 @@
 #include <game/client/render.h>
 #include <game/mapitems.h>
 
-class CEnvelope
+#include <game/editor/envelope_editor_points.h>
+
+class CEnvelope : public CEditorObject
 {
 public:
 	std::vector<CEnvPoint_runtime> m_vPoints;
@@ -17,14 +19,16 @@ public:
 		COLOR,
 		SOUND
 	};
-	explicit CEnvelope(EType Type);
-	explicit CEnvelope(int NumChannels);
+	CEnvelope(CEditor *pEditor, EType Type);
+	CEnvelope(CEditor *pEditor, int NumChannels);
+	CEnvelope(CEditor *pEditor, int NumChannels, const std::vector<CEnvPoint_runtime>& vPoints);
 
 	std::pair<float, float> GetValueRange(int ChannelMask);
 	int Eval(float Time, ColorRGBA &Color);
 	void AddPoint(int Time, int v0, int v1 = 0, int v2 = 0, int v3 = 0);
 	float EndTime() const;
 	int GetChannels() const;
+	std::vector<CEnvelopeEditorPoint> m_vEditorPoints;
 
 private:
 	void Resort();

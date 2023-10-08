@@ -132,7 +132,7 @@ public:
 	std::shared_ptr<CEnvelope> NewEnvelope(CEnvelope::EType Type)
 	{
 		OnModify();
-		std::shared_ptr<CEnvelope> pEnv = std::make_shared<CEnvelope>(Type);
+		std::shared_ptr<CEnvelope> pEnv = std::make_shared<CEnvelope>(m_pEditor, Type);
 		m_vpEnvelopes.push_back(pEnv);
 		return pEnv;
 	}

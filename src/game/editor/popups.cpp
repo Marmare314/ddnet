@@ -1517,7 +1517,7 @@ CUI::EPopupMenuFunctionResult CEditor::PopupEnvPointCurveType(void *pContext, CU
 				CEnvPoint FirstPoint = pEnvelope->m_vPoints[FirstSelectedIndex];
 				CEnvPoint LastPoint = pEnvelope->m_vPoints[LastSelectedIndex];
 
-				CEnvelope HelperEnvelope(1);
+				CEnvelope HelperEnvelope(pEditor, 1);
 				HelperEnvelope.AddPoint(FirstPoint.m_Time, FirstPoint.m_aValues[c]);
 				HelperEnvelope.AddPoint(LastPoint.m_Time, LastPoint.m_aValues[c]);
 				HelperEnvelope.m_vPoints[0].m_Curvetype = CurveType;

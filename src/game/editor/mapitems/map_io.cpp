@@ -929,22 +929,22 @@ bool CEditorMap::Load(const char *pFileName, int StorageType, const std::functio
 		for(int e = 0; e < EnvNum; e++)
 		{
 			CMapItemEnvelope *pItem = (CMapItemEnvelope *)DataFile.GetItem(EnvStart + e);
-			std::shared_ptr<CEnvelope> pEnv = std::make_shared<CEnvelope>(pItem->m_Channels);
-			pEnv->m_vPoints.resize(pItem->m_NumPoints);
+			std::vector<CEnvPoint_runtime> vPoints(pItem->m_NumPoints);
 			for(int p = 0; p < pItem->m_NumPoints; p++)
 			{
 				const CEnvPoint *pPoint = EnvelopePoints.GetPoint(pItem->m_StartPoint + p);
 				if(pPoint != nullptr)
-					mem_copy(&pEnv->m_vPoints[p], pPoint, sizeof(CEnvPoint));
+					mem_copy(&vPoints[p], pPoint, sizeof(CEnvPoint));
 				const CEnvPointBezier *pPointBezier = EnvelopePoints.GetBezier(pItem->m_StartPoint + p);
 				if(pPointBezier != nullptr)
-					mem_copy(&pEnv->m_vPoints[p].m_Bezier, pPointBezier, sizeof(CEnvPointBezier));
+					mem_copy(&vPoints[p].m_Bezier, pPointBezier, sizeof(CEnvPointBezier));
 			}
+			auto pEnv = std::make_shared<CEnvelope>(m_pEditor, pItem->m_Channels, vPoints);
 			if(pItem->m_aName[0] != -1) // compatibility with old maps
 				IntsToStr(pItem->m_aName, sizeof(pItem->m_aName) / sizeof(int), pEnv->m_aName);
-			m_vpEnvelopes.push_back(pEnv);
 			if(pItem->m_Version >= CMapItemEnvelope_v2::CURRENT_VERSION)
 				pEnv->m_Synchronized = pItem->m_Synchronized;
+			m_vpEnvelopes.push_back(pEnv);
 		}
 	}
 

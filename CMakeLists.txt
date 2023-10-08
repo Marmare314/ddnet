@@ -2268,6 +2268,10 @@ if(CLIENT)
     editor.h
     editor_object.cpp
     editor_object.h
+    editor_point.cpp
+    editor_point.h
+    envelope_editor_points.cpp
+    envelope_editor_points.h
     explanations.cpp
     map_grid.cpp
     map_grid.h

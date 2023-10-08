@@ -5554,9 +5554,9 @@ void CEditor::SetHotEnvelopePoint(const CUIRect &View, const std::shared_ptr<CEn
 	float my = UI()->MouseY();
 
 	float MinDist = 200.0f;
-	int *pMinPoint = nullptr;
+	void *pMinPoint = nullptr;
 
-	auto UpdateMinimum = [&](float px, float py, int *pID) {
+	auto UpdateMinimum = [&](float px, float py, void *pID) {
 		float dx = px - mx;
 		float dy = py - my;
 
@@ -5586,7 +5586,7 @@ void CEditor::SetHotEnvelopePoint(const CUIRect &View, const std::shared_ptr<CEn
 			{
 				float px = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]));
 				float py = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]));
-				UpdateMinimum(px, py, &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]);
+				UpdateMinimum(px, py, &pEnvelope->m_vEditorPoints[i].m_TangentHandlesStart[c]);
 			}
 
 			float px = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time));
@@ -6443,138 +6443,8 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 					// tangent handles for bezier curves
 					{
-						// Out-Tangent handle
-						if(pEnvelope->m_vPoints[i].m_Curvetype == CURVETYPE_BEZIER)
-						{
-							CUIRect Final;
-							Final.x = EnvelopeToScreenX(View, fxt2f(pEnvelope->m_vPoints[i].m_Time + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c]));
-							Final.y = EnvelopeToScreenY(View, fx2f(pEnvelope->m_vPoints[i].m_aValues[c] + pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c]));
-							Final.x -= 2.0f;
-							Final.y -= 2.0f;
-							Final.w = 4.0f;
-							Final.h = 4.0f;
-
-							// handle logic
-							const void *pID = &pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c];
-
-							if(IsTangentOutPointSelected(i, c))
-							{
-								Graphics()->SetColor(1, 1, 1, 1);
-								IGraphics::CFreeformItem FreeformItem(
-									Final.x + Final.w / 2.0f,
-									Final.y - 1,
-									Final.x + Final.w / 2.0f,
-									Final.y - 1,
-									Final.x + Final.w + 1,
-									Final.y + Final.h + 1,
-									Final.x - 1,
-									Final.y + Final.h + 1);
-								Graphics()->QuadsDrawFreeform(&FreeformItem, 1);
-							}
-
-							if(UI()->CheckActiveItem(pID))
-							{
-								m_ShowEnvelopePreview = SHOWENV_SELECTED;
-
-								if(s_Operation == OP_SELECT)
-								{
-									float dx = s_MouseXStart - UI()->MouseX();
-									float dy = s_MouseYStart - UI()->MouseY();
-
-									if(dx * dx + dy * dy > 20.0f)
-									{
-										s_Operation = OP_DRAG_POINT;
-
-										s_vAccurateDragValuesX = {static_cast<float>(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c])};
-										s_vAccurateDragValuesY = {static_cast<float>(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c])};
-
-										if(!IsTangentOutPointSelected(i, c))
-											SelectTangentOutPoint(i, c);
-									}
-								}
-
-								if(s_Operation == OP_DRAG_POINT)
-								{
-									float DeltaX = ScreenToEnvelopeDX(View, UI()->MouseDeltaX()) * (Input()->ModifierIsPressed() ? 50.0f : 1000.0f);
-									float DeltaY = ScreenToEnvelopeDY(View, UI()->MouseDeltaY()) * (Input()->ModifierIsPressed() ? 51.2f : 1024.0f);
-									s_vAccurateDragValuesX[0] += DeltaX;
-									s_vAccurateDragValuesY[0] -= DeltaY;
-
-									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = std::round(s_vAccurateDragValuesX[0]);
-									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c] = std::round(s_vAccurateDragValuesY[0]);
-
-									// clamp time value
-									pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = clamp<int>(pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c], 0, f2fxt(ScreenToEnvelopeX(View, View.x + View.w)) - pEnvelope->m_vPoints[i].m_Time);
-									s_vAccurateDragValuesX[0] = clamp<float>(s_vAccurateDragValuesX[0], 0, f2fxt(ScreenToEnvelopeX(View, View.x + View.w)) - pEnvelope->m_vPoints[i].m_Time);
-								}
-
-								if(s_Operation == OP_CONTEXT_MENU)
-								{
-									if(!UI()->MouseButton(1))
-									{
-										if(IsTangentOutPointSelected(i, c))
-										{
-											m_UpdateEnvPointInfo = true;
-											static SPopupMenuId s_PopupEnvPointId;
-											UI()->DoPopupMenu(&s_PopupEnvPointId, UI()->MouseX(), UI()->MouseY(), 150, 56, this, PopupEnvPoint);
-										}
-										UI()->SetActiveItem(nullptr);
-									}
-								}
-								else if(!UI()->MouseButton(0))
-								{
-									UI()->SetActiveItem(nullptr);
-									m_SelectedQuadEnvelope = -1;
-
-									if(s_Operation == OP_SELECT)
-										SelectTangentOutPoint(i, c);
-
-									s_Operation = OP_NONE;
-									m_Map.OnModify();
-								}
-
-								Graphics()->SetColor(1, 1, 1, 1);
-							}
-							else if(UI()->HotItem() == pID)
-							{
-								if(UI()->MouseButton(0))
-								{
-									UI()->SetActiveItem(pID);
-									s_Operation = OP_SELECT;
-									m_SelectedQuadEnvelope = m_SelectedEnvelope;
-
-									s_MouseXStart = UI()->MouseX();
-									s_MouseYStart = UI()->MouseY();
-								}
-								else if(UI()->MouseButtonClicked(1))
-								{
-									if(Input()->ShiftIsPressed())
-									{
-										SelectTangentOutPoint(i, c);
-										pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaX[c] = 0.0f;
-										pEnvelope->m_vPoints[i].m_Bezier.m_aOutTangentDeltaY[c] = 0.0f;
-										m_Map.OnModify();
-									}
-									else
-									{
-										s_Operation = OP_CONTEXT_MENU;
-										SelectTangentOutPoint(i, c);
-										UI()->SetActiveItem(pID);
-									}
-								}
-
-								m_ShowEnvelopePreview = SHOWENV_SELECTED;
-								Graphics()->SetColor(1, 1, 1, 1);
-								str_copy(m_aTooltip, "Bezier out-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift + right-click to reset.");
-								ms_pUiGotContext = pID;
-							}
-							else
-								Graphics()->SetColor(aColors[c].r, aColors[c].g, aColors[c].b, 1.0f);
-
-							// draw triangle
-							IGraphics::CFreeformItem FreeformItem(Final.x + Final.w / 2.0f, Final.y, Final.x + Final.w / 2.0f, Final.y, Final.x + Final.w, Final.y + Final.h, Final.x, Final.y + Final.h);
-							Graphics()->QuadsDrawFreeform(&FreeformItem, 1);
-						}
+						for(auto &StartHandle : pEnvelope->m_vEditorPoints[i].m_TangentHandlesStart)
+							StartHandle.OnUpdate(View);
 
 						// In-Tangent handle
 						if(i > 0 && pEnvelope->m_vPoints[i - 1].m_Curvetype == CURVETYPE_BEZIER)

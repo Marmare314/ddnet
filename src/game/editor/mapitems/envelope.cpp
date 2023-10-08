@@ -30,12 +30,16 @@ const CEnvPointBezier *CEnvelope::CEnvelopePointAccess::GetBezier(int Index) con
 	return &m_pvPoints->at(Index).m_Bezier;
 }
 
-CEnvelope::CEnvelope(EType Type) :
-	m_Type(Type), m_PointsAccess(&m_vPoints) {}
+CEnvelope::CEnvelope(CEditor *pEditor, EType Type) :
+	m_Type(Type), m_PointsAccess(&m_vPoints)
+{
+	Init(pEditor);
+}
 
-CEnvelope::CEnvelope(int NumChannels) :
+CEnvelope::CEnvelope(CEditor *pEditor, int NumChannels) :
 	m_PointsAccess(&m_vPoints)
 {
+	Init(pEditor);
 	switch(NumChannels)
 	{
 	case 1:
@@ -49,6 +53,18 @@ CEnvelope::CEnvelope(int NumChannels) :
 		break;
 	default:
 		dbg_assert(false, "invalid number of channels for envelope");
+	}
+}
+
+CEnvelope::CEnvelope(CEditor *pEditor, int NumChannels, const std::vector<CEnvPoint_runtime>& vPoints) :
+	CEnvelope(pEditor, NumChannels)
+{
+	m_vPoints = vPoints;
+	m_vEditorPoints.reserve(m_vPoints.size());
+	for(size_t i = 0; i < m_vPoints.size(); i++)
+	{
+		std::shared_ptr<CEnvelope> pThis(this);
+		m_vEditorPoints.emplace_back(Editor(), pThis, GetChannels());
 	}
 }
 
@@ -121,6 +137,9 @@ void CEnvelope::AddPoint(int Time, int v0, int v1, int v2, int v3)
 		p.m_Bezier.m_aOutTangentDeltaY[c] = 0;
 	}
 	m_vPoints.push_back(p);
+
+	std::shared_ptr<CEnvelope> pThis(this);
+	m_vEditorPoints.emplace_back(Editor(), pThis, GetChannels());
 	Resort();
 }
 
