@@ -501,7 +501,17 @@ void CUi::UpdateClipping()
 		const CUIRect *pRect = ClipArea();
 		const float XScale = Graphics()->ScreenWidth() / Screen()->w;
 		const float YScale = Graphics()->ScreenHeight() / Screen()->h;
-		Graphics()->ClipEnable((int)(pRect->x * XScale), (int)(pRect->y * YScale), (int)(pRect->w * XScale), (int)(pRect->h * YScale));
+
+		CUIRect ScaledRect;
+		ScaledRect.x = pRect->x * XScale;
+		ScaledRect.y = pRect->y * YScale;
+		ScaledRect.w = pRect->w * XScale;
+		ScaledRect.h = pRect->h * YScale;
+
+		float FracX = ScaledRect.x - std::round(ScaledRect.x);
+		float FracY = ScaledRect.y - std::round(ScaledRect.y);
+
+		Graphics()->ClipEnable(std::round(ScaledRect.x), std::round(ScaledRect.y), std::round(ScaledRect.w + FracX), std::round(ScaledRect.h + FracY));
 	}
 	else
 	{
