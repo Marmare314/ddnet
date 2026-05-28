@@ -3221,8 +3221,8 @@ void CClient::Run()
 	m_pEditor->Init();
 
 	m_ServerBrowser.OnInit();
-	// loads the existing ddnet info file if it exists
-	LoadDDNetInfo();
+
+	RequestDDNetInfo();
 
 	LoadDebugFont();
 
@@ -3257,11 +3257,9 @@ void CClient::Run()
 	InitChecksum();
 	m_pConsole->InitChecksum(ChecksumData());
 
-	// request the new ddnet info from server if already past the welcome dialog
+	// do not show welcome dialog again
 	if(g_Config.m_ClShowWelcome)
 		g_Config.m_ClShowWelcome = 0;
-	else
-		RequestDDNetInfo();
 
 	if(SoundInitFailed)
 	{
