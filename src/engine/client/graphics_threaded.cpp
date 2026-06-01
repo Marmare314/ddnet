@@ -1317,11 +1317,18 @@ int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float
 
 void CGraphics_Threaded::DrawRect(float x, float y, float w, float h, ColorRGBA Color, int Corners, float Rounding)
 {
-	TextureClear();
-	QuadsBegin();
-	SetColor(Color);
-	DrawRectExt(x, y, w, h, Rounding, Corners);
-	QuadsEnd();
+	// TextureClear();
+	// QuadsBegin();
+	// SetColor(Color);
+	// DrawRectExt(x, y, w, h, Rounding, Corners);
+	// QuadsEnd();
+	vec4 Radii = {
+		IGraphics::CORNER_BR & Corners ? Rounding : 0.0f,
+		IGraphics::CORNER_TR & Corners ? Rounding : 0.0f,
+		IGraphics::CORNER_BL & Corners ? Rounding : 0.0f,
+		IGraphics::CORNER_TL & Corners ? Rounding : 0.0f,
+	};
+	RenderRoundedRect({x, y}, {w, h}, Radii, Color);
 }
 
 void CGraphics_Threaded::DrawRect4(float x, float y, float w, float h, ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, int Corners, float Rounding)
@@ -1455,6 +1462,20 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 		*Cmd.m_pQuadInfo = *pQuadInfo;
 		m_pCommandBuffer->AddRenderCalls(1);
 	}
+}
+
+void CGraphics_Threaded::RenderRoundedRect(vec2 Pos, vec2 Size, vec4 CornerRadii, const ColorRGBA &Color)
+{
+	CCommandBuffer::SCommand_RenderRoundedRect Cmd;
+	Cmd.m_State = m_State;
+	Cmd.m_Pos = Pos;
+	Cmd.m_Size = Size;
+	Cmd.m_CornerRadii = CornerRadii;
+	Cmd.m_Color = Color;
+
+	AddCmd(Cmd);
+
+	m_pCommandBuffer->AddRenderCalls(1);
 }
 
 void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)

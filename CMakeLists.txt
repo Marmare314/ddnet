@@ -1648,6 +1648,8 @@ set(EXPECTED_DATA
   shader/primex.vert
   shader/quad.frag
   shader/quad.vert
+  shader/rounded_rect.frag
+  shader/rounded_rect.vert
   shader/spritemulti.frag
   shader/spritemulti.vert
   shader/text.frag

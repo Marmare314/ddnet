@@ -149,6 +149,7 @@ public:
 		CMD_RENDER_BORDER_TILE, // render one tile multiple times
 		CMD_RENDER_QUAD_LAYER, // render a quad layer
 		CMD_RENDER_QUAD_LAYER_GROUPED, // render a quad layer in groups meaning they all share the same envelope and offset (which can be none)
+		CMD_RENDER_ROUNDED_RECT, // render a colored rectangle with possibly rounded corners
 		CMD_RENDER_TEXT, // render text
 		CMD_RENDER_QUAD_CONTAINER, // render a quad buffer container
 		CMD_RENDER_QUAD_CONTAINER_EX, // render a quad buffer container with extended parameters
@@ -385,6 +386,18 @@ public:
 		SQuadRenderInfo *m_pQuadInfo;
 		size_t m_QuadNum;
 		int m_QuadOffset;
+	};
+
+	struct SCommand_RenderRoundedRect : public SCommand
+	{
+		SCommand_RenderRoundedRect() :
+			SCommand(CMD_RENDER_ROUNDED_RECT) {}
+		SState m_State;
+
+		vec2 m_Pos;
+		vec2 m_Size;
+		vec4 m_CornerRadii;
+		ColorRGBA m_Color;
 	};
 
 	struct SCommand_RenderText : public SCommand
@@ -1187,6 +1200,7 @@ public:
 	void RenderTileLayer(int BufferContainerIndex, const ColorRGBA &Color, char **pOffsets, unsigned int *pIndicedVertexDrawNum, size_t NumIndicesOffset) override;
 	void RenderBorderTiles(int BufferContainerIndex, const ColorRGBA &Color, char *pIndexBufferOffset, const vec2 &Offset, const vec2 &Scale, uint32_t DrawNum) override;
 	void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) override;
+	void RenderRoundedRect(vec2 Pos, vec2 Size, vec4 CornerRadii, const ColorRGBA &Color) override;
 	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override;
 
 	// modern GL functions

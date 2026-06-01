@@ -104,6 +104,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 	m_pQuadProgramTextured = new CGLSLQuadProgram;
 	m_pQuadProgramGrouped = new CGLSLQuadProgram;
 	m_pQuadProgramTexturedGrouped = new CGLSLQuadProgram;
+	m_pRoundedRectProgram = new CGLSLRoundedRectProgram;
 	m_pTextProgram = new CGLSLTextProgram;
 	m_pPrimitiveExProgram = new CGLSLPrimitiveExProgram;
 	m_pPrimitiveExProgramTextured = new CGLSLPrimitiveExProgram;
@@ -357,6 +358,27 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 	{
 		CGLSL VertexShader;
 		CGLSL FragmentShader;
+		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect.vert", GL_VERTEX_SHADER);
+		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect.frag", GL_FRAGMENT_SHADER);
+		ShaderCompiler.ClearDefines();
+
+		m_pRoundedRectProgram->CreateProgram();
+		m_pRoundedRectProgram->AddShader(&VertexShader);
+		m_pRoundedRectProgram->AddShader(&FragmentShader);
+		m_pRoundedRectProgram->LinkProgram();
+
+		UseProgram(m_pRoundedRectProgram);
+
+		m_pRoundedRectProgram->m_LocPos = m_pRoundedRectProgram->GetUniformLoc("gPos");
+		m_pRoundedRectProgram->m_LocTextureSampler = m_pRoundedRectProgram->GetUniformLoc("gTextureSampler");
+		m_pRoundedRectProgram->m_LocRectPos = m_pRoundedRectProgram->GetUniformLoc("gRectPos");
+		m_pRoundedRectProgram->m_LocRectSize = m_pRoundedRectProgram->GetUniformLoc("gRectSize");
+		m_pRoundedRectProgram->m_LocRadii = m_pRoundedRectProgram->GetUniformLoc("gRadii");
+		m_pRoundedRectProgram->m_LocColor = m_pRoundedRectProgram->GetUniformLoc("gColor");
+	}
+	{
+		CGLSL VertexShader;
+		CGLSL FragmentShader;
 		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/text.vert", GL_VERTEX_SHADER);
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/text.frag", GL_FRAGMENT_SHADER);
 
@@ -483,6 +505,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	m_pTileProgramTextured->DeleteProgram();
 	m_pPrimitive3DProgram->DeleteProgram();
 	m_pPrimitive3DProgramTextured->DeleteProgram();
+	m_pRoundedRectProgram->DeleteProgram();
 	m_pTextProgram->DeleteProgram();
 	m_pPrimitiveExProgram->DeleteProgram();
 	m_pPrimitiveExProgramTextured->DeleteProgram();
@@ -503,6 +526,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	delete m_pTileProgramTextured;
 	delete m_pPrimitive3DProgram;
 	delete m_pPrimitive3DProgramTextured;
+	delete m_pRoundedRectProgram;
 	delete m_pTextProgram;
 	delete m_pPrimitiveExProgram;
 	delete m_pPrimitiveExProgramTextured;
@@ -1195,6 +1219,24 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderQuadLayer(const CCommandBuff
 		pProgram->SetUniform(pProgram->m_LocRotations, 1, &Rotations);
 		glDrawElements(GL_TRIANGLES, QuadsLeft * 6, GL_UNSIGNED_INT, (void *)((QuadOffset + QuadOffsetExtra) * 6 * sizeof(unsigned int)));
 	}
+}
+
+void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderRoundedRect(const CCommandBuffer::SCommand_RenderRoundedRect *pCommand)
+{
+	UseProgram(m_pRoundedRectProgram);
+
+	SetState(pCommand->m_State, m_pRoundedRectProgram);
+
+	m_pRoundedRectProgram->SetUniformVec2(m_pRoundedRectProgram->m_LocRectPos, 1, (float *)&pCommand->m_Pos);
+	m_pRoundedRectProgram->SetUniformVec2(m_pRoundedRectProgram->m_LocRectSize, 1, (float *)&pCommand->m_Size);
+	m_pRoundedRectProgram->SetUniformVec4(m_pRoundedRectProgram->m_LocRadii, 1, (float *)&pCommand->m_CornerRadii);
+	m_pRoundedRectProgram->SetUniformVec4(m_pRoundedRectProgram->m_LocColor, 1, (float *)&pCommand->m_Color);
+
+	GLuint DummyVOA = 0;
+	glGenVertexArrays(1, &DummyVOA);
+	glBindVertexArray(DummyVOA);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)

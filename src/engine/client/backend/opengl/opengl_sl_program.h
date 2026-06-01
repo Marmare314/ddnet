@@ -147,6 +147,15 @@ public:
 	int m_LocQuadOffset;
 };
 
+class CGLSLRoundedRectProgram : public CGLSLTWProgram
+{
+public:
+	int m_LocRectPos;
+	int m_LocRectSize;
+	int m_LocRadii;
+	int m_LocColor;
+};
+
 class CGLSLTileProgram : public CGLSLTWProgram
 {
 public:
